@@ -617,7 +617,10 @@ tr:last-child td { border-bottom: none; }
         <button class="filter-btn" onclick="filterCounselor('Refus', this)">Refus</button>
         <button class="filter-btn" onclick="filterCounselor('En attente', this)">En attente</button>
       </div>
-      <button class="btn-secondary" onclick="toggleArchives()" id="btn-show-archives" style="white-space:nowrap;padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);font-size:12px">📦 Archives</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-add" onclick="openNewJeune()" style="padding:6px 14px;font-size:13px">+ Nouveau jeune</button>
+        <button class="btn-secondary" onclick="toggleArchives()" id="btn-show-archives" style="white-space:nowrap;padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);font-size:12px">📦 Archives</button>
+      </div>
     </div>
 
     <div id="archives-panel" style="display:none;margin-bottom:16px">
@@ -727,6 +730,40 @@ tr:last-child td { border-bottom: none; }
       <button class="btn-secondary" onclick="closeModal()">Annuler</button>
       <button id="btn-delete" class="btn-danger" onclick="deleteCandidature()" style="display:none">Supprimer</button>
       <button class="btn-primary" style="flex:2" onclick="saveCandidature()" id="btn-save">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL NOUVEAU JEUNE ══════════════════════════════════════════════════════ -->
+<div id="modal-new-jeune" class="modal-overlay" onclick="if(event.target===this)closeNewJeune()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">👤 Nouveau jeune</div>
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="field">
+          <label>Prénom *</label>
+          <input type="text" id="nj-prenom" placeholder="Ex: Marco" oninput="generateCode()">
+        </div>
+        <div class="field">
+          <label>Nom *</label>
+          <input type="text" id="nj-nom" placeholder="Ex: Rossi" oninput="generateCode()">
+        </div>
+      </div>
+      <div class="field">
+        <label>Code personnel (modifiable)</label>
+        <input type="text" id="nj-code" placeholder="MAR2025" style="font-family:'DM Mono',monospace" oninput="this.value=this.value.toUpperCase()">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Généré automatiquement — tu peux le modifier</div>
+      </div>
+      <div class="field">
+        <label>Email (optionnel)</label>
+        <input type="email" id="nj-email" placeholder="jeune@email.com">
+      </div>
+    </div>
+    <div id="nj-error" style="color:var(--refus-text);background:var(--refus-bg);border-radius:8px;padding:10px 14px;font-size:13px;margin-top:12px;display:none"></div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn-secondary" onclick="closeNewJeune()">Annuler</button>
+      <button class="btn-primary" style="flex:2" id="btn-create-jeune" onclick="createJeune()">Créer le profil</button>
     </div>
   </div>
 </div>
@@ -1403,6 +1440,82 @@ let userPrefs = { email: '', notifications: '' };
 
 function openPrefs() {
   document.getElementById('modal-prefs').classList.add('open');
+}
+
+// ── NOUVEAU JEUNE ─────────────────────────────────────────────────────────────
+function openNewJeune() {
+  document.getElementById('nj-prenom').value = '';
+  document.getElementById('nj-nom').value = '';
+  document.getElementById('nj-code').value = '';
+  document.getElementById('nj-email').value = '';
+  document.getElementById('nj-error').style.display = 'none';
+  document.getElementById('modal-new-jeune').classList.add('open');
+  setTimeout(() => document.getElementById('nj-prenom').focus(), 100);
+}
+
+function closeNewJeune() {
+  document.getElementById('modal-new-jeune').classList.remove('open');
+}
+
+function generateCode() {
+  const prenom = document.getElementById('nj-prenom').value.trim();
+  const annee = new Date().getFullYear();
+  if (!prenom) { document.getElementById('nj-code').value = ''; return; }
+  const prefix = prenom.normalize('NFD').replace(/\u0300-\u036f/g, '').substring(0, 3).toUpperCase();
+  const baseCode = prefix + annee;
+
+  // Si le code existe déjà, ajouter un suffixe B, C, D...
+  const existingCodes = Object.keys(jeunesMap).map(c => c.toUpperCase());
+  const suffixes = ['', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  let code = baseCode;
+  for (const s of suffixes) {
+    if (!existingCodes.includes(baseCode + s)) { code = baseCode + s; break; }
+  }
+  document.getElementById('nj-code').value = code;
+}
+
+async function createJeune() {
+  const prenom = document.getElementById('nj-prenom').value.trim();
+  const nom = document.getElementById('nj-nom').value.trim();
+  const code = document.getElementById('nj-code').value.trim().toUpperCase();
+  const email = document.getElementById('nj-email').value.trim();
+  const errEl = document.getElementById('nj-error');
+
+  if (!prenom || !nom) { errEl.textContent = 'Prénom et nom sont obligatoires.'; errEl.style.display = 'block'; return; }
+  if (!code) { errEl.textContent = 'Le code personnel est obligatoire.'; errEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('btn-create-jeune');
+  btn.textContent = 'Création...';
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    const nomComplet = prenom + ' ' + nom;
+    const url = APPS_SCRIPT_URL
+      + '?action=create_jeune'
+      + '&code=' + encodeURIComponent(code)
+      + '&nom=' + encodeURIComponent(nomComplet)
+      + '&email=' + encodeURIComponent(email);
+    const res = await fetch(url);
+    const json = await res.json();
+
+    if (!json.success) {
+      errEl.textContent = json.error || 'Erreur lors de la création.';
+      errEl.style.display = 'block';
+    } else {
+      // Update local maps
+      jeunesMap[code] = nomComplet;
+      allData[code] = [];
+      closeNewJeune();
+      renderCounselor();
+      toast('Profil de ' + nomComplet + ' créé ✓');
+    }
+  } catch(e) {
+    errEl.textContent = 'Erreur de connexion.';
+    errEl.style.display = 'block';
+  }
+  btn.textContent = 'Créer le profil';
+  btn.disabled = false;
 }
 
 function closePrefs() {
