@@ -553,7 +553,13 @@ tr:last-child td { border-bottom: none; }
 
     <div id="tab-counselor" style="display:none">
       <div class="field">
-        <label>Mot de passe conseiller</label>
+        <label>Ton code conseiller</label>
+        <input type="text" id="counselor-code" placeholder="Ex: SEDA" autocomplete="off"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter')loginCounselor()">
+      </div>
+      <div class="field">
+        <label>Mot de passe</label>
         <input type="password" id="counselor-pwd" placeholder="••••••••"
           onkeydown="if(event.key==='Enter')loginCounselor()">
       </div>
@@ -603,7 +609,7 @@ tr:last-child td { border-bottom: none; }
   <div class="app-header">
     <div class="header-brand">Tableau de bord</div>
     <div class="header-user">
-      <span class="header-badge">Conseiller</span>
+      <span class="header-badge" id="counselor-header-name">Conseiller</span>
       <button class="btn-logout" onclick="logout()">Quitter</button>
     </div>
   </div>
@@ -790,7 +796,8 @@ tr:last-child td { border-bottom: none; }
 <script>
 // ══ CONFIG ══════════════════════════════════════════════════════════════════
 const SHEET_ID = '1H50lIMQwGTzT-eSHjTClc5pguPiwWX8cxC_4LCkH74c';
-const COUNSELOR_PASSWORD = 'CAP2024';
+// Mot de passe supprimé — authentification via Google Sheets
+let currentConseiller = null; // { code, nom }
 
 // ════════════════════════════════════════════════════════════════════════════
 // NOTE IMPORTANTE :
@@ -831,7 +838,8 @@ function setYouthFilter(filter, btn) {
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
 async function gsRead() {
-  const url = APPS_SCRIPT_URL + '?action=read';
+  const conseiller = currentConseiller ? '&conseiller=' + encodeURIComponent(currentConseiller.code) : '';
+  const url = APPS_SCRIPT_URL + '?action=read' + conseiller;
   const res = await fetch(url);
   const rows = await res.json();
   const data = {};
@@ -855,7 +863,8 @@ async function gsRead() {
 }
 
 async function gsReadJeunes() {
-  const url = APPS_SCRIPT_URL + '?action=read_jeunes';
+  const conseiller = currentConseiller ? '&conseiller=' + encodeURIComponent(currentConseiller.code) : '';
+  const url = APPS_SCRIPT_URL + '?action=read_jeunes' + conseiller;
   const res = await fetch(url);
   const rows = await res.json();
   const map = {};
@@ -879,6 +888,7 @@ async function gsAppend(item) {
     email: item.email,
     notes: item.notes,
     id: item.id,
+    conseiller: currentConseiller ? currentConseiller.code : '',
   };
   const url = APPS_SCRIPT_URL + '?action=write&row=' + encodeURIComponent(JSON.stringify(row));
   await fetch(url);
@@ -947,33 +957,51 @@ async function loginYouth() {
 }
 
 async function loginCounselor() {
+  const code = document.getElementById('counselor-code').value.trim();
   const pwd = document.getElementById('counselor-pwd').value;
-  if (pwd !== COUNSELOR_PASSWORD) { showError('Mot de passe incorrect.'); return; }
-  currentRole = 'counselor';
+  if (!code || !pwd) { showError('Entre ton code et ton mot de passe.'); return; }
+
   const btnC = document.getElementById('btn-login-counselor');
-  btnC.textContent = 'Chargement...';
+  btnC.textContent = 'Vérification...';
   btnC.disabled = true;
+
   try {
-    allData = await gsRead();
+    const res = await fetch(APPS_SCRIPT_URL + '?action=login_conseiller&code=' + encodeURIComponent(code) + '&motdepasse=' + encodeURIComponent(pwd));
+    const json = await res.json();
+    if (!json.success) {
+      showError('Code ou mot de passe incorrect.');
+      btnC.textContent = 'Accéder au tableau de bord →';
+      btnC.disabled = false;
+      return;
+    }
+    currentConseiller = { code: json.code, nom: json.nom };
+    currentRole = 'counselor';
+    document.getElementById('counselor-header-name').textContent = json.nom;
+    btnC.textContent = 'Chargement...';
+    try {
+      allData = await gsRead();
+    } catch(e) {
+      showError('Erreur de connexion.');
+      btnC.textContent = 'Accéder au tableau de bord →';
+      btnC.disabled = false;
+      return;
+    }
+    try {
+      jeunesMap = await gsReadJeunes();
+    } catch(e) {
+      jeunesMap = {};
+    }
+    showScreen('counselor');
+    renderCounselor();
   } catch(e) {
     showError('Erreur de connexion. Vérifie ta connexion internet.');
-    btnC.textContent = 'Accéder au tableau de bord →';
-    btnC.disabled = false;
-    return;
   }
-  try {
-    jeunesMap = await gsReadJeunes();
-  } catch(e) {
-    jeunesMap = {};
-  }
-  showScreen('counselor');
-  renderCounselor();
   btnC.textContent = 'Accéder au tableau de bord →';
   btnC.disabled = false;
 }
 
 function logout() {
-  currentUser = null; currentRole = null; allData = {}; youthFilter = 'all'; userPrefs = { email: '', notifications: '' };
+  currentUser = null; currentRole = null; currentConseiller = null; allData = {}; youthFilter = 'all'; userPrefs = { email: '', notifications: '' };
   showScreen('login');
   document.getElementById('youth-code').value = '';
   document.getElementById('counselor-pwd').value = '';
@@ -1491,11 +1519,13 @@ async function createJeune() {
 
   try {
     const nomComplet = prenom + ' ' + nom;
+    const conseillerCode = currentConseiller ? currentConseiller.code : '';
     const url = APPS_SCRIPT_URL
       + '?action=create_jeune'
       + '&code=' + encodeURIComponent(code)
       + '&nom=' + encodeURIComponent(nomComplet)
-      + '&email=' + encodeURIComponent(email);
+      + '&email=' + encodeURIComponent(email)
+      + '&conseiller=' + encodeURIComponent(conseillerCode);
     const res = await fetch(url);
     const json = await res.json();
 
