@@ -544,8 +544,8 @@ tr:last-child td { border-bottom: none; }
 
     <div id="tab-youth">
       <div class="field">
-        <label>Ton code personnel</label>
-        <input type="text" id="youth-code" placeholder="Ex: SED01" autocomplete="off" autocapitalize="characters"
+        <label>Votre code personnel</label>
+        <input type="text" id="youth-code" placeholder="Ex : SED01" autocomplete="off" autocapitalize="characters"
           oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')loginYouth()">
       </div>
       <button class="btn-primary" id="btn-login-youth" onclick="loginYouth()">Accéder à mon suivi →</button>
@@ -553,8 +553,8 @@ tr:last-child td { border-bottom: none; }
 
     <div id="tab-counselor" style="display:none">
       <div class="field">
-        <label>Ton code conseiller</label>
-        <input type="text" id="counselor-code" placeholder="Ex: SEDA" autocomplete="off"
+        <label>Votre code conseiller</label>
+        <input type="text" id="counselor-code" placeholder="Ex : SEDA" autocomplete="off"
           oninput="this.value=this.value.toUpperCase()"
           onkeydown="if(event.key==='Enter')loginCounselor()">
       </div>
@@ -759,7 +759,7 @@ tr:last-child td { border-bottom: none; }
       <div class="field">
         <label>Code personnel (modifiable)</label>
         <input type="text" id="nj-code" placeholder="MAR2025" style="font-family:'DM Mono',monospace" oninput="this.value=this.value.toUpperCase()">
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">Généré automatiquement — tu peux le modifier</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Généré automatiquement — vous pouvez le modifier</div>
       </div>
       <div class="field">
         <label>Email (optionnel)</label>
@@ -804,7 +804,7 @@ let currentConseiller = null; // { code, nom }
 // Cette app utilise l'API Google Sheets publique (lecture seule).
 // Pour l'écriture (ajout/modification/suppression), il faut déployer
 // un Google Apps Script. Voir les instructions dans le fichier README
-// joint ou demander à ton conseiller technique.
+// joint ou demander à votre conseiller technique.
 // En attendant, les données sont sauvegardées localement dans le navigateur.
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -927,7 +927,7 @@ function switchTab(tab) {
 
 async function loginYouth() {
   const code = document.getElementById('youth-code').value.trim().toUpperCase();
-  if (!code) { showError('Entre ton code personnel.'); return; }
+  if (!code) { showError('Entrez votre code personnel.'); return; }
   const btnLogin = document.getElementById('btn-login-youth');
   btnLogin.textContent = 'Vérification...';
   btnLogin.disabled = true;
@@ -935,7 +935,7 @@ async function loginYouth() {
     const res = await fetch(APPS_SCRIPT_URL + '?action=check_code&code=' + code);
     const json = await res.json();
     if (!json.valid) {
-      showError('Code non reconnu. Demande ton code à ton conseiller.');
+      showError('Code non reconnu. Demandez votre code à votre conseiller.');
       btnLogin.textContent = 'Accéder à mon suivi →';
       btnLogin.disabled = false;
       return;
@@ -959,7 +959,7 @@ async function loginYouth() {
 async function loginCounselor() {
   const code = document.getElementById('counselor-code').value.trim();
   const pwd = document.getElementById('counselor-pwd').value;
-  if (!code || !pwd) { showError('Entre ton code et ton mot de passe.'); return; }
+  if (!code || !pwd) { showError('Entrez votre code et votre mot de passe.'); return; }
 
   const btnC = document.getElementById('btn-login-counselor');
   btnC.textContent = 'Vérification...';
@@ -1037,7 +1037,7 @@ function renderYouth() {
     list.innerHTML = `<div class="empty-state">
       <div class="empty-icon">📬</div>
       <div class="empty-title">Pas encore de candidatures</div>
-      <div class="empty-text">Appuie sur "+ Ajouter" dès que tu envoies une candidature.</div>
+      <div class="empty-text">Appuie sur "+ Ajouter" dès que vous envoyez une candidature.</div>
     </div>`;
     return;
   }
@@ -1077,7 +1077,7 @@ function renderYouth() {
       + '<span class="cand-date">' + (item.date ? formatDate(item.date) : 'Date non renseignée') + '</span>'
       + (item.contact ? '<span style="font-size:12px;color:var(--text3)">· ' + item.contact + '</span>' : '')
       + '</div>'
-      + (followup ? '<div class="followup-banner">⏰ Envoyée il y a ' + days + ' jours — pense à relancer !</div>' : '')
+      + (followup ? '<div class="followup-banner">⏰ Envoyée il y a ' + days + ' jours — pensez à relancer !</div>' : '')
       + (item.notes ? '<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">' + item.notes + '</div>' : '')
       + '</div>';
   }).join('') + '</div>';
@@ -1112,7 +1112,7 @@ function closeModal() {
 async function saveCandidature() {
   const enterprise = document.getElementById('f-enterprise').value.trim();
   const metier = document.getElementById('f-metier').value.trim();
-  if (!enterprise || !metier) { toast("Remplis au moins l'entreprise et le métier.", true); return; }
+  if (!enterprise || !metier) { toast("Remplissez au moins l'entreprise et le métier.", true); return; }
 
   if (!allData[currentUser]) allData[currentUser] = [];
 
@@ -1168,18 +1168,20 @@ async function deleteCandidature() {
 // ── COUNSELOR RENDER ─────────────────────────────────────────────────────────
 function renderCounselor() {
   const grid = document.getElementById('counselor-grid');
-  const codes = Object.keys(allData);
 
-  if (!codes.length) {
+  // Utiliser jeunesMap comme source principale — tous les jeunes, même sans candidature
+  const allCodes = Object.keys(jeunesMap);
+
+  if (!allCodes.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
       <div class="empty-icon">👥</div>
-      <div class="empty-title">Aucune donnée pour l'instant</div>
-      <div class="empty-text">Les candidatures des jeunes apparaîtront ici dès qu'ils auront commencé à remplir leur suivi.</div>
+      <div class="empty-title">Aucun jeune pour l'instant</div>
+      <div class="empty-text">Crée un premier profil avec le bouton "+ Nouveau jeune".</div>
     </div>`;
     return;
   }
 
-  const filtered = counselorFilter === 'all' ? codes : codes.filter(code =>
+  const filtered = counselorFilter === 'all' ? allCodes : allCodes.filter(code =>
     (allData[code]||[]).some(i => i.statut === counselorFilter)
   );
 
