@@ -576,6 +576,7 @@ tr:last-child td { border-bottom: none; }
     <div class="header-brand">Candidatures</div>
     <div class="header-user">
       <span class="header-badge" id="youth-header-code"></span>
+      <button class="btn-logout" onclick="refreshYouth()" style="margin-right:6px" title="Rafraîchir">↻</button>
       <button class="btn-logout" onclick="openPrefs()" style="margin-right:6px">🔔</button>
       <button class="btn-logout" onclick="logout()">Quitter</button>
     </div>
@@ -610,6 +611,7 @@ tr:last-child td { border-bottom: none; }
     <div class="header-brand">Tableau de bord</div>
     <div class="header-user">
       <span class="header-badge" id="counselor-header-name">Conseiller</span>
+      <button class="btn-logout" onclick="refreshCounselor()" style="margin-right:6px" title="Rafraîchir">↻</button>
       <button class="btn-logout" onclick="logout()">Quitter</button>
     </div>
   </div>
@@ -799,6 +801,57 @@ const SHEET_ID = '1H50lIMQwGTzT-eSHjTClc5pguPiwWX8cxC_4LCkH74c';
 // Mot de passe supprimé — authentification via Google Sheets
 let currentConseiller = null; // { code, nom }
 
+// ── SESSION PERSISTANTE ───────────────────────────────────────────────────────
+function saveSession() {
+  if (currentRole === 'counselor' && currentConseiller) {
+    sessionStorage.setItem('cap_role', 'counselor');
+    sessionStorage.setItem('cap_conseiller', JSON.stringify(currentConseiller));
+  } else if (currentRole === 'youth' && currentUser) {
+    sessionStorage.setItem('cap_role', 'youth');
+    sessionStorage.setItem('cap_user', currentUser);
+    sessionStorage.setItem('cap_prefs', JSON.stringify(userPrefs));
+  }
+}
+
+function clearSession() {
+  sessionStorage.removeItem('cap_role');
+  sessionStorage.removeItem('cap_conseiller');
+  sessionStorage.removeItem('cap_user');
+  sessionStorage.removeItem('cap_prefs');
+}
+
+async function restoreSession() {
+  const role = sessionStorage.getItem('cap_role');
+  if (!role) return;
+  try {
+    if (role === 'counselor') {
+      const conseiller = JSON.parse(sessionStorage.getItem('cap_conseiller'));
+      if (!conseiller) return;
+      currentConseiller = conseiller;
+      currentRole = 'counselor';
+      document.getElementById('counselor-header-name').textContent = conseiller.nom;
+      allData = await gsRead();
+      jeunesMap = await gsReadJeunes();
+      showScreen('counselor');
+      renderCounselor();
+    } else if (role === 'youth') {
+      const user = sessionStorage.getItem('cap_user');
+      const prefs = JSON.parse(sessionStorage.getItem('cap_prefs') || '{}');
+      if (!user) return;
+      currentUser = user;
+      currentRole = 'youth';
+      userPrefs = prefs;
+      document.getElementById('youth-header-code').textContent = user;
+      allData = await gsRead();
+      if (!allData[user]) allData[user] = [];
+      showScreen('youth');
+      renderYouth();
+    }
+  } catch(e) {
+    clearSession();
+  }
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // NOTE IMPORTANTE :
 // Cette app utilise l'API Google Sheets publique (lecture seule).
@@ -949,6 +1002,7 @@ async function loginYouth() {
     if (!allData[code]) allData[code] = [];
     showScreen('youth');
     renderYouth();
+    saveSession();
   } catch(e) {
     showError('Erreur de connexion. Vérifie ta connexion internet.');
   }
@@ -993,6 +1047,7 @@ async function loginCounselor() {
     }
     showScreen('counselor');
     renderCounselor();
+    saveSession();
   } catch(e) {
     showError('Erreur de connexion. Vérifie ta connexion internet.');
   }
@@ -1002,6 +1057,7 @@ async function loginCounselor() {
 
 function logout() {
   currentUser = null; currentRole = null; currentConseiller = null; allData = {}; youthFilter = 'all'; userPrefs = { email: '', notifications: '' };
+  clearSession();
   showScreen('login');
   document.getElementById('youth-code').value = '';
   document.getElementById('counselor-pwd').value = '';
@@ -1464,6 +1520,30 @@ function toast(msg, err) {
 
 // Set today's date as default
 document.getElementById('f-date').value = todayISO();
+
+// Restore session on page load
+restoreSession();
+
+async function refreshYouth() {
+  try {
+    allData = await gsRead();
+    renderYouth();
+    toast('Données mises à jour ✓');
+  } catch(e) {
+    toast('Erreur de connexion', true);
+  }
+}
+
+async function refreshCounselor() {
+  try {
+    allData = await gsRead();
+    jeunesMap = await gsReadJeunes();
+    renderCounselor();
+    toast('Données mises à jour ✓');
+  } catch(e) {
+    toast('Erreur de connexion', true);
+  }
+}
 
 // ── PRÉFÉRENCES ───────────────────────────────────────────────────────────────
 let userPrefs = { email: '', notifications: '' };
