@@ -1823,18 +1823,22 @@ function renderDetailTable(code) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Aucune candidature dans cette catégorie</td></tr>`;
     return;
   }
+  const lastSeen = lastSeenMap[currentDetailCode] ? new Date(lastSeenMap[currentDetailCode]).getTime() : 0;
   tbody.innerHTML = sorted.map(item => {
     const followup = needsFollowUp(item);
     const days = daysSince(item.date);
-    return `
-    <tr style="${followup ? 'background:#FFFBEB' : ''}">
-      <td><strong>${item.entreprise}</strong>${followup ? ` <span style="font-size:11px;color:#92590A;background:#FEF3C7;padding:1px 6px;border-radius:10px;margin-left:4px">⏰ ${days}j</span>` : ''}</td>
-      <td>${item.metier}</td>
-      <td style="font-family:monospace;font-size:12px;white-space:nowrap">${item.date ? formatDate(item.date) : '—'}</td>
-      <td><span class="badge badge-${item.statut}">${item.statut}</span></td>
-      <td>${item.contact||'—'}<br>${item.telephone ? `<span style="font-size:11px;color:var(--text3)">${item.telephone}</span>` : ''}</td>
-      <td style="max-width:160px;font-size:12px;color:var(--text2)">${item.notes||'—'}</td>
-    </tr>`;
+    const isNew = item.date && new Date(parseSheetDate(item.date)).getTime() > lastSeen;
+    const rowBg = followup ? 'background:#FFFBEB' : isNew ? 'background:#EFF6FF' : '';
+    const newBadge = isNew ? '<span style="font-size:10px;color:#1A56A4;background:#DBEAFE;padding:1px 7px;border-radius:10px;margin-left:6px;font-weight:700">Nouveau</span>' : '';
+    const alertBadge = followup ? '<span style="font-size:11px;color:#92590A;background:#FEF3C7;padding:1px 6px;border-radius:10px;margin-left:4px">⏰ ' + days + 'j</span>' : '';
+    return '<tr style="' + rowBg + '">'
+      + '<td><strong>' + item.entreprise + '</strong>' + newBadge + alertBadge + '</td>'
+      + '<td>' + item.metier + '</td>'
+      + '<td style="font-family:monospace;font-size:12px;white-space:nowrap">' + (item.date ? formatDate(item.date) : '—') + '</td>'
+      + '<td><span class="badge badge-' + item.statut + '">' + item.statut + '</span></td>'
+      + '<td>' + (item.contact||'—') + (item.telephone ? '<br><span style="font-size:11px;color:var(--text3)">' + item.telephone + '</span>' : '') + '</td>'
+      + '<td style="max-width:160px;font-size:12px;color:var(--text2)">' + (item.notes||'—') + '</td>'
+      + '</tr>';
   }).join('');
 }
 
