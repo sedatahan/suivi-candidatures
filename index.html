@@ -530,8 +530,16 @@ tr:last-child td { border-bottom: none; }
 </head>
 <body>
 
+<!-- ══ LOADING ═════════════════════════════════════════════════════════════════ -->
+<div id="screen-loading" class="screen active" style="align-items:center;justify-content:center;background:var(--bg)">
+  <div style="text-align:center">
+    <div class="spinner" style="width:32px;height:32px;margin:0 auto 16px"></div>
+    <div style="font-size:14px;color:var(--text2)">Chargement...</div>
+  </div>
+</div>
+
 <!-- ══ LOGIN ══════════════════════════════════════════════════════════════════ -->
-<div id="screen-login" class="screen active">
+<div id="screen-login" class="screen">
   <div class="login-card">
     <div class="login-logo">CAP Formations</div>
     <h1 class="login-title">Mes candidatures</h1>
@@ -822,7 +830,10 @@ function clearSession() {
 
 async function restoreSession() {
   const role = sessionStorage.getItem('cap_role');
-  if (!role) return;
+  if (!role) {
+    showScreen('login');
+    return;
+  }
   try {
     if (role === 'counselor') {
       const conseiller = JSON.parse(sessionStorage.getItem('cap_conseiller'));
@@ -849,6 +860,7 @@ async function restoreSession() {
     }
   } catch(e) {
     clearSession();
+    showScreen('login');
   }
 }
 
@@ -1072,7 +1084,7 @@ function showError(msg) {
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
-  document.getElementById('login-error').style.display = 'none';
+  if (name !== 'loading') document.getElementById('login-error').style.display = 'none';
 }
 
 // ── YOUTH RENDER ─────────────────────────────────────────────────────────────
