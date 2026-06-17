@@ -275,6 +275,24 @@ body {
 }
 .empty-icon { font-size: 40px; margin-bottom: 12px; }
 
+/* ── PASTILLE NOUVEAUTÉ ── */
+.notif-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #EF4444;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 10px;
+  padding: 0 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+  line-height: 1;
+}
+
 /* ── VUE SWITCHER ── */
 .view-switcher {
   display: flex;
@@ -1330,7 +1348,10 @@ async function gsReadJeunes() {
   const map = {};
   rows.forEach(r => {
     const code = String(r.code || '').toUpperCase().trim();
-    if (code) map[code] = r.nom || '';
+    if (code) {
+      map[code] = r.nom || '';
+      if (r.derniere_lecture) lastSeenMap[code] = r.derniere_lecture;
+    }
   });
   return map;
 }
@@ -1753,9 +1774,10 @@ function renderCounselor() {
     const displayName = nomJeune ? nomJeune : code;
     const displaySub = nomJeune ? `(${code}) — ${items.length} candidature${items.length>1?'s':''}` : `${items.length} candidature${items.length>1?'s':''}`;
     const alertCount = items.filter(i => needsFollowUp(i)).length;
+    const newCount = hasNewCandidaturesSheet(code) ? countNewSheet(code) : 0;
     return `<div class="youth-card${alertCount ? ' followup' : ''}" onclick="showDetail('${code}')">
       <div class="youth-name" style="display:flex;align-items:center;justify-content:space-between">
-        <span>${displayName}</span>
+        <span>${displayName}${newCount ? `<span class="notif-dot">${newCount}</span>` : ''}</span>
         ${alertCount ? `<span style="font-size:11px;background:#FEF3C7;color:#92590A;padding:2px 8px;border-radius:10px;font-weight:600">⏰ ${alertCount} à relancer</span>` : ''}
       </div>
       <div class="youth-code">${displaySub}</div>
@@ -1779,6 +1801,7 @@ function filterCounselor(filter, btn) {
 }
 
 function showDetail(code) {
+  markAsSeenSheet(code);
   currentDetailCode = code;
   detailFilter = 'all';
   document.querySelectorAll('#detail-filter-bar .filter-btn').forEach((b,i) => b.classList.toggle('active', i===0));
@@ -1846,6 +1869,37 @@ Ses candidatures seront déplacées dans les archives. Il ne pourra plus se conn
   }
   btn.textContent = '📦 Archiver';
   btn.disabled = false;
+}
+
+// ── SUIVI DOSSIERS LUS ───────────────────────────────────────────────────────
+// Stocke { code: timestamp_derniere_ouverture } dans sessionStorage
+function getLastSeen() {
+  try { return JSON.parse(localStorage.getItem('cap_last_seen') || '{}'); } catch(e) { return {}; }
+}
+function markAsSeen(code) {
+  const seen = getLastSeen();
+  seen[code] = Date.now();
+  localStorage.setItem('cap_last_seen', JSON.stringify(seen));
+}
+function hasNewCandidatures(code) {
+  const seen = getLastSeen();
+  const lastSeen = seen[code] || 0;
+  const items = allData[code] || [];
+  return items.some(item => {
+    if (!item.date) return false;
+    const itemDate = new Date(parseSheetDate(item.date)).getTime();
+    return itemDate > lastSeen;
+  });
+}
+function countNew(code) {
+  const seen = getLastSeen();
+  const lastSeen = seen[code] || 0;
+  const items = allData[code] || [];
+  return items.filter(item => {
+    if (!item.date) return false;
+    const itemDate = new Date(parseSheetDate(item.date)).getTime();
+    return itemDate > lastSeen;
+  }).length;
 }
 
 let archivesData = [];
@@ -2187,4 +2241,40 @@ async function createJeune() {
 function closePrefs() {
   document.getElementById('modal-prefs').classList.remove('open');
 }
+
+// ── LECTURE DOSSIER (Sheet) ───────────────────────────────────────────────────
+let lastSeenMap = {}; // code -> ISO timestamp depuis le Sheet
+
+async function markAsSeenSheet(code) {
+  lastSeenMap[code] = new Date().toISOString();
+  try {
+    await fetch(APPS_SCRIPT_URL + '?action=mark_as_read&code=' + encodeURIComponent(code));
+  } catch(e) {}
+}
+
+function hasNewCandidaturesSheet(code) {
+  const lastSeen = lastSeenMap[code] ? new Date(lastSeenMap[code]).getTime() : 0;
+  const items = allData[code] || [];
+  return items.some(item => {
+    if (!item.date) return false;
+    return new Date(parseSheetDate(item.date)).getTime() > lastSeen;
+  });
+}
+
+function countNewSheet(code) {
+  const lastSeen = lastSeenMap[code] ? new Date(lastSeenMap[code]).getTime() : 0;
+  const items = allData[code] || [];
+  return items.filter(item => {
+    if (!item.date) return false;
+    return new Date(parseSheetDate(item.date)).getTime() > lastSeen;
+  }).length;
+}
+
+// Set today's date as default
+document.getElementById('f-date').value = todayISO();
+
+// Restore session on page load
+restoreSession();
 </script>
+</body>
+</html>
