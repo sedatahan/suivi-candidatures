@@ -694,6 +694,12 @@ tr:last-child td { border-bottom: none; }
         <button class="btn-add" onclick="openModal()">+ Ajouter</button>
       </div>
     </div>
+    <div style="margin-bottom:12px">
+      <input type="text" id="youth-search" placeholder="🔍 Rechercher une entreprise, un métier..."
+        oninput="renderYouth()"
+        style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);outline:none">
+    </div>
+
     <div class="filter-bar" id="youth-filter-bar" style="margin-bottom:14px">
       <button class="filter-btn active" onclick="setYouthFilter('all',this)">Par défaut</button>
       <button class="filter-btn" onclick="setYouthFilter('Envoyée',this)">Envoyées</button>
@@ -717,7 +723,13 @@ tr:last-child td { border-bottom: none; }
     </div>
   </div>
   <div class="counselor-body">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+    <div style="margin-bottom:12px">
+      <input type="text" id="counselor-search" placeholder="🔍 Rechercher un jeune..." 
+        oninput="renderCounselor()"
+        style="width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);outline:none">
+    </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
       <div class="filter-bar" id="filter-bar" style="margin-bottom:0">
         <button class="filter-btn active" onclick="filterCounselor('all', this)">Tous</button>
         <button class="filter-btn" onclick="filterCounselor('Entretien', this)">Entretiens</button>
@@ -1220,6 +1232,18 @@ function renderYouth() {
     return new Date(b.date||0) - new Date(a.date||0);
   });
 
+  // Filtre recherche
+  const youthSearch = (document.getElementById('youth-search') ? document.getElementById('youth-search').value : '').toLowerCase().trim();
+  if (youthSearch) {
+    sorted = sorted.filter(i =>
+      (i.entreprise || '').toLowerCase().includes(youthSearch) ||
+      (i.metier || '').toLowerCase().includes(youthSearch) ||
+      (i.contact || '').toLowerCase().includes(youthSearch) ||
+      (i.notes || '').toLowerCase().includes(youthSearch)
+    );
+  }
+
+  // Tri par statut prioritaire
   if (youthFilter !== 'all') {
     const priority = sorted.filter(i => i.statut === youthFilter);
     const rest = sorted.filter(i => i.statut !== youthFilter);
@@ -1391,7 +1415,26 @@ function renderCounselor() {
   const grid = document.getElementById('counselor-grid');
 
   // Utiliser jeunesMap comme source principale — tous les jeunes, même sans candidature
-  const allCodes = Object.keys(jeunesMap);
+  const searchVal = (document.getElementById('counselor-search') ? document.getElementById('counselor-search').value : '').toLowerCase().trim();
+
+  let allCodes = Object.keys(jeunesMap);
+
+  // Filtrer par recherche
+  if (searchVal) {
+    allCodes = allCodes.filter(code => {
+      const nom = (jeunesMap[code] || '').toLowerCase();
+      return nom.includes(searchVal) || code.toLowerCase().includes(searchVal);
+    });
+  }
+
+  if (!allCodes.length && searchVal) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">Aucun résultat</div>
+      <div class="empty-text">Aucun jeune ne correspond à "${searchVal}"</div>
+    </div>`;
+    return;
+  }
 
   if (!allCodes.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
