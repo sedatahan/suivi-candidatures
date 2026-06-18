@@ -1322,19 +1322,21 @@ async function gsRead() {
   const rows = await res.json();
   const data = {};
   rows.forEach(r => {
-    const code = r.code_jeune;
+    const code = String(r.code_jeune || '').toUpperCase().trim();
     if (!code) return;
     if (!data[code]) data[code] = [];
     data[code].push({
       id: r.id || genId(),
-      entreprise: r.entreprise,
-      metier: r.metier,
-      date: r.date_envoi,
-      statut: r.statut,
-      contact: r.contact,
-      telephone: r.telephone,
-      email: r.email,
-      notes: r.notes,
+      entreprise: r.entreprise || '',
+      metier: r.metier || '',
+      date: parseSheetDate(r.date_envoi),
+      statut: r.statut || 'Envoyée',
+      contact: r.contact || '',
+      telephone: r.telephone || '',
+      email: r.email || '',
+      notes: r.notes || '',
+      nom_jeune: r.nom_jeune || '',
+      date_ajout: r.date_ajout || '',
     });
   });
   return data;
