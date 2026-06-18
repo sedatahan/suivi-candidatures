@@ -1296,6 +1296,7 @@ function setView(view) {
 }
 let detailFilter = 'all';
 let currentDetailCode = null;
+let currentDetailLastSeen = null; // date de lecture AVANT ouverture du dossier
 let jeunesMap = {}; // code -> nom
 
 function setDetailFilter(filter, btn) {
@@ -1805,8 +1806,14 @@ function filterCounselor(filter, btn) {
 }
 
 function showDetail(code) {
+  // Sauvegarder l'ancienne date AVANT de mettre à jour
+  const previousLastSeen = lastSeenMap[code] || null;
+  // Mettre à jour localement immédiatement
+  lastSeenMap[code] = new Date().toISOString();
+  // Envoyer au Sheet en arrière-plan
   markAsSeenSheet(code);
   currentDetailCode = code;
+  currentDetailLastSeen = previousLastSeen;
   detailFilter = 'all';
   document.querySelectorAll('#detail-filter-bar .filter-btn').forEach((b,i) => b.classList.toggle('active', i===0));
   const items = allData[code] || [];
@@ -1827,8 +1834,8 @@ function renderDetailTable(code) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Aucune candidature dans cette catégorie</td></tr>`;
     return;
   }
-  const lastSeenRaw = lastSeenMap[currentDetailCode];
-  const lastSeen = lastSeenRaw ? new Date(lastSeenRaw).getTime() : 0;
+  // Utiliser la date de lecture AVANT ouverture (pas après)
+  const lastSeen = currentDetailLastSeen ? new Date(currentDetailLastSeen).getTime() : 0;
   tbody.innerHTML = sorted.map(item => {
     const followup = needsFollowUp(item);
     const days = daysSince(item.date);
@@ -1850,7 +1857,9 @@ function renderDetailTable(code) {
 function closeDetail() {
   document.getElementById('detail-panel').classList.remove('open');
   currentDetailCode = null;
+  currentDetailLastSeen = null;
   detailFilter = 'all';
+  renderCounselor(); // Rafraîchir les cartes pour enlever la pastille
 }
 
 async function archiveJeune() {
