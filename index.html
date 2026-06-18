@@ -22,7 +22,9 @@
   --text2: #6B6860;
   --text3: #9C9A94;
   --accent: #1A1916;
-  --radius: 14px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;
   --shadow: 0 2px 12px rgba(0,0,0,0.07);
 
   --envoyee-bg: #EBF3FF; --envoyee-text: #1A56A4; --envoyee-dot: #3B82F6;
@@ -62,7 +64,7 @@ body {
 }
 .login-card {
   background: var(--surface);
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   padding: 40px 32px;
   width: 100%;
   max-width: 380px;
@@ -82,7 +84,7 @@ body {
 .login-tabs {
   display: flex;
   background: var(--surface2);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 4px;
   gap: 4px;
   margin-bottom: 24px;
@@ -92,7 +94,7 @@ body {
   padding: 8px;
   border: none;
   background: transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-family: 'DM Sans', sans-serif;
   font-size: 14px;
   font-weight: 500;
@@ -108,7 +110,7 @@ body {
   width: 100%;
   padding: 12px 14px;
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-family: 'DM Sans', sans-serif;
   font-size: 15px;
   background: var(--bg);
@@ -125,7 +127,7 @@ body {
   background: var(--accent);
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-family: 'DM Sans', sans-serif;
   font-size: 15px;
   font-weight: 600;
@@ -138,7 +140,7 @@ body {
 .login-error {
   color: var(--refus-text);
   background: var(--refus-bg);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 14px;
   font-size: 13px;
   margin-top: 12px;
@@ -175,7 +177,7 @@ body {
   font-size: 12px;
   font-weight: 600;
   padding: 4px 10px;
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   background: var(--surface2);
   color: var(--text2);
   font-family: 'DM Mono', monospace;
@@ -183,7 +185,7 @@ body {
 .btn-logout {
   background: none;
   border: 1.5px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 5px 12px;
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
@@ -204,7 +206,7 @@ body {
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 12px 8px;
   text-align: center;
 }
@@ -223,17 +225,18 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #16a34a;
+  background: #15803d;
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 9px 16px;
   font-family: 'DM Sans', sans-serif;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(22,163,74,0.3);
+  transition: opacity 0.2s;
 }
+.btn-add:active { opacity: 0.85; }
 
 .card-list { display: flex; flex-direction: column; gap: 10px; }
 
@@ -273,7 +276,7 @@ body {
   padding: 48px 24px;
   color: var(--text2);
 }
-.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-icon { display: none; }
 
 /* ── PASTILLE NOUVEAUTÉ ── */
 .notif-dot {
@@ -298,7 +301,7 @@ body {
   display: flex;
   gap: 4px;
   background: var(--surface2);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 3px;
 }
 .view-btn {
@@ -359,7 +362,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   margin-bottom: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -367,7 +370,7 @@ body {
 .kanban-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 12px;
   margin-bottom: 8px;
   cursor: pointer;
@@ -382,7 +385,7 @@ body {
 .followup-banner {
   background: #FFF3CD;
   border: 1.5px solid #F59E0B;
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 8px 12px;
   font-size: 12px;
   color: #92590A;
@@ -403,25 +406,27 @@ body {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(26,25,22,0.5);
   z-index: 200;
   display: none;
   align-items: flex-end;
   justify-content: center;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 .modal-overlay.open { display: flex; }
 @media (min-width: 600px) { .modal-overlay { align-items: center; } }
 
 .modal {
   background: var(--surface);
-  border-radius: 24px 24px 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   width: 100%;
   max-width: 520px;
   padding: 24px 20px 32px;
   max-height: 92vh;
   overflow-y: auto;
 }
-@media (min-width: 600px) { .modal { border-radius: 24px; } }
+@media (min-width: 600px) { .modal { border-radius: var(--radius-lg); } }
 
 .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
 .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
@@ -434,7 +439,7 @@ body {
   width: 100%;
   padding: 12px 14px;
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-family: 'DM Sans', sans-serif;
   font-size: 15px;
   background: var(--bg);
@@ -451,7 +456,7 @@ body {
   width: 100%;
   padding: 12px 14px;
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-family: 'DM Sans', sans-serif;
   font-size: 15px;
   background: var(--bg);
@@ -468,7 +473,7 @@ body {
   background: var(--surface2);
   color: var(--text);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-family: 'DM Sans', sans-serif;
   font-size: 15px;
   font-weight: 500;
@@ -479,7 +484,7 @@ body {
   background: var(--refus-bg);
   color: var(--refus-text);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   font-family: 'DM Sans', sans-serif;
   font-size: 14px;
   font-weight: 500;
@@ -503,7 +508,7 @@ body {
 .filter-btn {
   white-space: nowrap;
   padding: 7px 14px;
-  border-radius: 20px;
+  border-radius: var(--radius-lg);
   border: 1.5px solid var(--border);
   background: var(--surface);
   font-family: 'DM Sans', sans-serif;
@@ -585,7 +590,7 @@ tr:last-child td { border-bottom: none; }
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-top: none;
-  border-radius: 0 0 10px 10px;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
   max-height: 200px;
   overflow-y: auto;
   z-index: 300;
@@ -647,7 +652,7 @@ tr:last-child td { border-bottom: none; }
   background: var(--accent);
   color: white;
   padding: 12px 20px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   font-size: 14px;
   font-weight: 500;
   z-index: 999;
@@ -1524,7 +1529,6 @@ function renderYouth() {
   const list = document.getElementById('youth-list');
   if (!items.length) {
     list.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">📬</div>
       <div class="empty-title">Pas encore de candidatures</div>
       <div class="empty-text">Appuie sur "+ Ajouter" dès que vous envoyez une candidature.</div>
     </div>`;
@@ -1560,7 +1564,6 @@ function renderYouth() {
 
   if (!sorted.length) {
     list.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">🔍</div>
       <div class="empty-title">Aucune candidature dans cette catégorie</div>
     </div>`;
     return;
@@ -1738,7 +1741,7 @@ function renderCounselor() {
 
   if (!allCodes.length && searchVal) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-      <div class="empty-icon">🔍</div>
+      
       <div class="empty-title">Aucun résultat</div>
       <div class="empty-text">Aucun jeune ne correspond à "${searchVal}"</div>
     </div>`;
@@ -1747,7 +1750,7 @@ function renderCounselor() {
 
   if (!allCodes.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-      <div class="empty-icon">👥</div>
+      
       <div class="empty-title">Aucun jeune pour l'instant</div>
       <div class="empty-text">Crée un premier profil avec le bouton "+ Nouveau jeune".</div>
     </div>`;
@@ -1760,7 +1763,7 @@ function renderCounselor() {
 
   if (!filtered.length) {
     grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-      <div class="empty-icon">🔍</div>
+      
       <div class="empty-title">Aucun résultat</div>
       <div class="empty-text">Aucun jeune n'a de candidature avec ce statut.</div>
     </div>`;
