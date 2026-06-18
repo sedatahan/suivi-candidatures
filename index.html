@@ -1370,6 +1370,7 @@ async function gsAppend(item) {
     notes: item.notes,
     id: item.id,
     conseiller: currentConseiller ? currentConseiller.code : youthConseiller,
+    date_ajout: item.date_ajout || new Date().toISOString(),
   };
   const url = APPS_SCRIPT_URL + '?action=write&row=' + encodeURIComponent(JSON.stringify(row));
   await fetch(url);
@@ -1675,6 +1676,7 @@ async function saveCandidature() {
     telephone: document.getElementById('f-tel').value.trim(),
     email: document.getElementById('f-email').value.trim(),
     notes: document.getElementById('f-notes').value.trim(),
+    date_ajout: editingId ? null : new Date().toISOString(),
   };
 
   const btnSave = document.getElementById('btn-save');
@@ -1823,11 +1825,12 @@ function renderDetailTable(code) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Aucune candidature dans cette catégorie</td></tr>`;
     return;
   }
-  const lastSeen = lastSeenMap[currentDetailCode] ? new Date(lastSeenMap[currentDetailCode]).getTime() : 0;
+  const lastSeenRaw = lastSeenMap[currentDetailCode];
+  const lastSeen = lastSeenRaw ? new Date(lastSeenRaw).getTime() : 0;
   tbody.innerHTML = sorted.map(item => {
     const followup = needsFollowUp(item);
     const days = daysSince(item.date);
-    const isNew = item.date && new Date(parseSheetDate(item.date)).getTime() > lastSeen;
+    const isNew = lastSeen > 0 && item.date_ajout && new Date(item.date_ajout).getTime() > lastSeen;
     const rowBg = followup ? 'background:#FFFBEB' : isNew ? 'background:#EFF6FF' : '';
     const newBadge = isNew ? '<span style="font-size:10px;color:#1A56A4;background:#DBEAFE;padding:1px 7px;border-radius:10px;margin-left:6px;font-weight:700">Nouveau</span>' : '';
     const alertBadge = followup ? '<span style="font-size:11px;color:#92590A;background:#FEF3C7;padding:1px 6px;border-radius:10px;margin-left:4px">⏰ ' + days + 'j</span>' : '';
@@ -2258,19 +2261,21 @@ async function markAsSeenSheet(code) {
 
 function hasNewCandidaturesSheet(code) {
   const lastSeen = lastSeenMap[code] ? new Date(lastSeenMap[code]).getTime() : 0;
+  if (lastSeen === 0) return false;
   const items = allData[code] || [];
   return items.some(item => {
-    if (!item.date) return false;
-    return new Date(parseSheetDate(item.date)).getTime() > lastSeen;
+    const ajout = item.date_ajout ? new Date(item.date_ajout).getTime() : 0;
+    return ajout > lastSeen;
   });
 }
 
 function countNewSheet(code) {
   const lastSeen = lastSeenMap[code] ? new Date(lastSeenMap[code]).getTime() : 0;
+  if (lastSeen === 0) return 0;
   const items = allData[code] || [];
   return items.filter(item => {
-    if (!item.date) return false;
-    return new Date(parseSheetDate(item.date)).getTime() > lastSeen;
+    const ajout = item.date_ajout ? new Date(item.date_ajout).getTime() : 0;
+    return ajout > lastSeen;
   }).length;
 }
 
