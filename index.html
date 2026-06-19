@@ -513,7 +513,18 @@ body {
 .form-grid { display: grid; gap: 14px; min-width: 0; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-width: 0; }
 .form-row .field { min-width: 0; }
-.form-row .field input, .form-row .field select { min-width: 0; }
+.form-row .field input, .form-row .field select { min-width: 0; width: 100%; }
+.form-row .field input[type="date"] {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 8px;
+  font-size: 14px;
+}
+.form-row .field input[type="date"]::-webkit-calendar-picker-indicator {
+  margin-left: 2px;
+  padding: 0;
+}
 @media (max-width: 360px) { .form-row { grid-template-columns: 1fr; } }
 
 .field select {
