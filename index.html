@@ -513,13 +513,27 @@ body {
 .form-grid { display: grid; gap: 14px; min-width: 0; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-width: 0; }
 .form-row .field { min-width: 0; }
-.form-row .field input, .form-row .field select { min-width: 0; width: 100%; }
+.form-row .field input, .form-row .field select {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  height: 45px;
+}
 .form-row .field input[type="date"] {
   min-width: 0;
   width: 100%;
   box-sizing: border-box;
-  padding-right: 8px;
+  height: 45px;
+  padding: 0 14px;
   font-size: 14px;
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+}
+.form-row .field input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  height: auto;
 }
 .form-row .field input[type="date"]::-webkit-calendar-picker-indicator {
   margin-left: 2px;
