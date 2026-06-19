@@ -519,25 +519,9 @@ body {
   box-sizing: border-box;
   height: 45px;
 }
-.form-row .field input[type="date"] {
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
-  height: 45px;
-  padding: 0 14px;
-  font-size: 14px;
+.field input[type="date"] {
   -webkit-appearance: none;
   appearance: none;
-  display: flex;
-  align-items: center;
-}
-.form-row .field input[type="date"]::-webkit-date-and-time-value {
-  text-align: left;
-  height: auto;
-}
-.form-row .field input[type="date"]::-webkit-calendar-picker-indicator {
-  margin-left: 2px;
-  padding: 0;
 }
 @media (max-width: 360px) { .form-row { grid-template-columns: 1fr; } }
 
@@ -1034,21 +1018,19 @@ tr:last-child td { border-bottom: none; }
           autocomplete="off">
         <div id="metier-suggestions" class="autocomplete-list" style="display:none"></div>
       </div>
-      <div class="form-row">
-        <div class="field">
-          <label>Date d'envoi</label>
-          <input type="date" id="f-date">
-        </div>
-        <div class="field">
-          <label>Statut</label>
-          <select id="f-statut">
-            <option>Envoyée</option>
-            <option>Relancée</option>
-            <option>Entretien</option>
-            <option>Refus</option>
-            <option>En attente</option>
-          </select>
-        </div>
+      <div class="field">
+        <label>Date d'envoi</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="field">
+        <label>Statut</label>
+        <select id="f-statut">
+          <option>Envoyée</option>
+          <option>Relancée</option>
+          <option>Entretien</option>
+          <option>Refus</option>
+          <option>En attente</option>
+        </select>
       </div>
       <div class="field">
         <label>Nom du contact</label>
