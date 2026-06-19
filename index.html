@@ -502,15 +502,19 @@ body {
   padding: 24px 20px 32px;
   max-height: 92vh;
   overflow-y: auto;
+  box-sizing: border-box;
+  touch-action: pan-y;
 }
 @media (min-width: 600px) { .modal { border-radius: var(--radius-lg); } }
 
 .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
 .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
 
-.form-grid { display: grid; gap: 14px; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 400px) { .form-row { grid-template-columns: 1fr; } }
+.form-grid { display: grid; gap: 14px; min-width: 0; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-width: 0; }
+.form-row .field { min-width: 0; }
+.form-row .field input, .form-row .field select { min-width: 0; }
+@media (max-width: 360px) { .form-row { grid-template-columns: 1fr; } }
 
 .field select {
   width: 100%;
@@ -2438,6 +2442,63 @@ document.getElementById('f-date').value = todayISO();
 
 // Restore session on page load
 restoreSession();
+
+// ── SWIPE POUR FERMER LES MODALS (mobile) ──
+(function(){
+  const closers = {
+    'modal-overlay': closeModal,
+    'modal-new-jeune': closeNewJeune,
+    'modal-prefs': closePrefs
+  };
+
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    const modal = overlay.querySelector('.modal');
+    if (!modal) return;
+    const closeFn = closers[overlay.id];
+    if (!closeFn) return;
+
+    let startY = 0;
+    let currentY = 0;
+    let dragging = false;
+    let startedAtTop = false;
+
+    modal.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      currentY = startY;
+      // On n'autorise le swipe-to-close que si le contenu est déjà scrollé en haut,
+      // pour ne pas interférer avec le scroll normal du formulaire.
+      startedAtTop = modal.scrollTop <= 0;
+      dragging = startedAtTop;
+      modal.style.transition = 'none';
+    }, { passive: true });
+
+    modal.addEventListener('touchmove', (e) => {
+      if (!dragging) return;
+      currentY = e.touches[0].clientY;
+      const delta = currentY - startY;
+      if (delta > 0) {
+        modal.style.transform = 'translateY(' + delta + 'px)';
+      }
+    }, { passive: true });
+
+    modal.addEventListener('touchend', () => {
+      if (!dragging) return;
+      dragging = false;
+      const delta = currentY - startY;
+      modal.style.transition = 'transform 0.25s ease';
+      if (delta > 90) {
+        modal.style.transform = 'translateY(100%)';
+        setTimeout(() => {
+          closeFn();
+          modal.style.transition = 'none';
+          modal.style.transform = '';
+        }, 200);
+      } else {
+        modal.style.transform = 'translateY(0)';
+      }
+    });
+  });
+})();
 
 // ── ANIMATION AVION EN PAPIER (écran de connexion) ──
 (function(){
