@@ -1436,6 +1436,19 @@ const METIERS_SUISSE = [
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFTLxvtlWdOWZm6aWX42y6mitRkhQz2KKphZOUzUDdL7P6woRbisF9YIg/exec'; // À remplir après déploiement du script
 
+// Jeton d'accès attendu par l'Apps Script (doit correspondre à la valeur définie
+// dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
+// Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
+// (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
+
+// Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
+function gsUrl(action, params) {
+  let url = APPS_SCRIPT_URL + '?action=' + action + '&token=' + encodeURIComponent(API_TOKEN);
+  if (params) url += params;
+  return url;
+}
+
 let currentUser = null;
 let currentRole = null;
 let allData = {};
@@ -1474,7 +1487,7 @@ function genId() { return Date.now().toString(36) + Math.random().toString(36).s
 
 async function gsRead() {
   const conseiller = currentConseiller ? '&conseiller=' + encodeURIComponent(currentConseiller.code) : '';
-  const url = APPS_SCRIPT_URL + '?action=read' + conseiller;
+  const url = gsUrl('read', conseiller);
   const res = await fetch(url);
   const rows = await res.json();
   const data = {};
@@ -1501,7 +1514,7 @@ async function gsRead() {
 
 async function gsReadJeunes() {
   const conseiller = currentConseiller ? '&conseiller=' + encodeURIComponent(currentConseiller.code) : '';
-  const url = APPS_SCRIPT_URL + '?action=read_jeunes' + conseiller;
+  const url = gsUrl('read_jeunes', conseiller);
   const res = await fetch(url);
   const rows = await res.json();
   const map = {};
@@ -1531,7 +1544,7 @@ async function gsAppend(item) {
     conseiller: currentConseiller ? currentConseiller.code : youthConseiller,
     date_ajout: item.date_ajout || new Date().toISOString(),
   };
-  const url = APPS_SCRIPT_URL + '?action=write&row=' + encodeURIComponent(JSON.stringify(row));
+  const url = gsUrl('write', '&row=' + encodeURIComponent(JSON.stringify(row)));
   await fetch(url);
 }
 
@@ -1549,12 +1562,12 @@ async function gsUpdate(item) {
     notes: item.notes,
     id: item.id,
   };
-  const url = APPS_SCRIPT_URL + '?action=update&row=' + encodeURIComponent(JSON.stringify(row));
+  const url = gsUrl('update', '&row=' + encodeURIComponent(JSON.stringify(row)));
   await fetch(url);
 }
 
 async function gsDelete(id, code) {
-  const url = APPS_SCRIPT_URL + '?action=delete&id=' + id + '&code=' + code;
+  const url = gsUrl('delete', '&id=' + id + '&code=' + code);
   await fetch(url);
 }
 
@@ -1573,7 +1586,7 @@ async function loginYouth() {
   btnLogin.textContent = 'Vérification...';
   btnLogin.disabled = true;
   try {
-    const res = await fetch(APPS_SCRIPT_URL + '?action=check_code&code=' + code);
+    const res = await fetch(gsUrl('check_code', '&code=' + code));
     const json = await res.json();
     if (!json.valid) {
       showError('Code non reconnu. Demandez votre code à votre conseiller.');
@@ -1609,7 +1622,7 @@ async function loginCounselor() {
   btnC.disabled = true;
 
   try {
-    const res = await fetch(APPS_SCRIPT_URL + '?action=login_conseiller&code=' + encodeURIComponent(code) + '&motdepasse=' + encodeURIComponent(pwd));
+    const res = await fetch(gsUrl('login_conseiller', '&code=' + encodeURIComponent(code) + '&motdepasse=' + encodeURIComponent(pwd)));
     const json = await res.json();
     if (!json.success) {
       showError('Code ou mot de passe incorrect.');
@@ -2029,7 +2042,7 @@ Ses candidatures seront déplacées dans les archives. Il ne pourra plus se conn
   btn.disabled = true;
 
   try {
-    const url = APPS_SCRIPT_URL + '?action=archive_jeune&code=' + encodeURIComponent(currentDetailCode);
+    const url = gsUrl('archive_jeune', '&code=' + encodeURIComponent(currentDetailCode));
     await fetch(url);
     delete allData[currentDetailCode];
     delete jeunesMap[currentDetailCode];
@@ -2088,7 +2101,7 @@ async function toggleArchives() {
   }
   btn.textContent = 'Chargement...';
   try {
-    const res = await fetch(APPS_SCRIPT_URL + '?action=read_archives');
+    const res = await fetch(gsUrl('read_archives'));
     archivesData = await res.json();
     renderArchivesList();
     panel.style.display = '';
@@ -2161,8 +2174,8 @@ async function desarchiveJeune() {
   btn.disabled = true;
 
   try {
-    await fetch(APPS_SCRIPT_URL + '?action=desarchive_jeune&code=' + encodeURIComponent(currentArchiveCode));
-    const res = await fetch(APPS_SCRIPT_URL + '?action=read_archives');
+    await fetch(gsUrl('desarchive_jeune', '&code=' + encodeURIComponent(currentArchiveCode)));
+    const res = await fetch(gsUrl('read_archives'));
     archivesData = await res.json();
     allData = await gsRead();
     jeunesMap = await gsReadJeunes();
@@ -2382,12 +2395,11 @@ async function createJeune() {
   try {
     const nomComplet = prenom + ' ' + nom;
     const conseillerCode = currentConseiller ? currentConseiller.code : '';
-    const url = APPS_SCRIPT_URL
-      + '?action=create_jeune'
-      + '&code=' + encodeURIComponent(code)
+    const url = gsUrl('create_jeune',
+        '&code=' + encodeURIComponent(code)
       + '&nom=' + encodeURIComponent(nomComplet)
       + '&email=' + encodeURIComponent(email)
-      + '&conseiller=' + encodeURIComponent(conseillerCode);
+      + '&conseiller=' + encodeURIComponent(conseillerCode));
     const res = await fetch(url);
     const json = await res.json();
 
@@ -2420,7 +2432,7 @@ let lastSeenMap = {}; // code -> ISO timestamp depuis le Sheet
 async function markAsSeenSheet(code) {
   lastSeenMap[code] = new Date().toISOString();
   try {
-    await fetch(APPS_SCRIPT_URL + '?action=mark_as_read&code=' + encodeURIComponent(code));
+    await fetch(gsUrl('mark_as_read', '&code=' + encodeURIComponent(code)));
   } catch(e) {}
 }
 
