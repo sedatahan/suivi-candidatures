@@ -873,7 +873,6 @@ tr:last-child td { border-bottom: none; }
     <div class="header-user">
       <span class="header-badge" id="youth-header-code"></span>
       <button class="btn-logout" onclick="refreshYouth()" style="margin-right:6px" title="Rafraîchir">↻</button>
-      <button class="btn-logout" onclick="openPrefs()" style="margin-right:6px">🔔</button>
       <button class="btn-logout" onclick="logout()">Quitter</button>
     </div>
   </div>
@@ -1082,32 +1081,11 @@ tr:last-child td { border-bottom: none; }
         <input type="text" id="nj-code" placeholder="MAR2025" style="font-family:'DM Mono',monospace" oninput="this.value=this.value.toUpperCase()">
         <div style="font-size:11px;color:var(--text3);margin-top:4px">Généré automatiquement — vous pouvez le modifier</div>
       </div>
-      <div class="field">
-        <label>Email (optionnel)</label>
-        <input type="email" id="nj-email" placeholder="jeune@email.com">
-      </div>
     </div>
     <div id="nj-error" style="color:var(--refus-text);background:var(--refus-bg);border-radius:8px;padding:10px 14px;font-size:13px;margin-top:12px;display:none"></div>
     <div class="modal-actions" style="margin-top:20px">
       <button class="btn-secondary" onclick="closeNewJeune()">Annuler</button>
       <button class="btn-primary" style="flex:2" id="btn-create-jeune" onclick="createJeune()">Créer le profil</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ MODAL PRÉFÉRENCES ═══════════════════════════════════════════════════════ -->
-<div id="modal-prefs" class="modal-overlay" onclick="if(event.target===this)closePrefs()">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">⚙️ Mes préférences</div>
-    <div style="text-align:center;padding:24px 16px">
-      <div style="font-size:48px;margin-bottom:16px">🔔</div>
-      <div style="font-weight:600;font-size:16px;margin-bottom:8px">Notifications par email</div>
-      <div style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:20px">Cette fonctionnalité est en cours de développement.<br>Elle sera bientôt disponible !</div>
-      <div style="display:inline-block;background:var(--attente-bg);color:var(--attente-text);font-size:12px;font-weight:500;padding:6px 14px;border-radius:20px">🚧 Bientôt disponible</div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-primary" onclick="closePrefs()">Fermer</button>
     </div>
   </div>
 </div>
@@ -1129,7 +1107,6 @@ function saveSession() {
   } else if (currentRole === 'youth' && currentUser) {
     sessionStorage.setItem('cap_role', 'youth');
     sessionStorage.setItem('cap_user', currentUser);
-    sessionStorage.setItem('cap_prefs', JSON.stringify(userPrefs));
   }
 }
 
@@ -1159,11 +1136,9 @@ async function restoreSession() {
       renderCounselor();
     } else if (role === 'youth') {
       const user = sessionStorage.getItem('cap_user');
-      const prefs = JSON.parse(sessionStorage.getItem('cap_prefs') || '{}');
       if (!user) return;
       currentUser = user;
       currentRole = 'youth';
-      userPrefs = prefs;
       document.getElementById('youth-header-code').textContent = user;
       allData = await gsRead();
       if (!allData[user]) allData[user] = [];
@@ -1442,7 +1417,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -1599,7 +1574,6 @@ async function loginYouth() {
     currentUser = code;
     currentRole = 'youth';
     document.getElementById('youth-header-code').textContent = json.nom ? json.nom : code;
-    userPrefs = { email: json.email || '', notifications: json.notifications || '' };
     youthConseiller = json.conseiller || '';
     btnLogin.textContent = 'Chargement...';
     allData = await gsRead();
@@ -1660,7 +1634,7 @@ async function loginCounselor() {
 }
 
 function logout() {
-  currentUser = null; currentRole = null; currentConseiller = null; youthConseiller = ''; allData = {}; youthFilter = 'all'; userPrefs = { email: '', notifications: '' };
+  currentUser = null; currentRole = null; currentConseiller = null; youthConseiller = ''; allData = {}; youthFilter = 'all';
   clearSession();
   showScreen('login');
   document.getElementById('youth-code').value = '';
@@ -2340,19 +2314,11 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// ── PRÉFÉRENCES ───────────────────────────────────────────────────────────────
-let userPrefs = { email: '', notifications: '' };
-
-function openPrefs() {
-  document.getElementById('modal-prefs').classList.add('open');
-}
-
 // ── NOUVEAU JEUNE ─────────────────────────────────────────────────────────────
 function openNewJeune() {
   document.getElementById('nj-prenom').value = '';
   document.getElementById('nj-nom').value = '';
   document.getElementById('nj-code').value = '';
-  document.getElementById('nj-email').value = '';
   document.getElementById('nj-error').style.display = 'none';
   document.getElementById('modal-new-jeune').classList.add('open');
   setTimeout(() => document.getElementById('nj-prenom').focus(), 100);
@@ -2383,7 +2349,6 @@ async function createJeune() {
   const prenom = document.getElementById('nj-prenom').value.trim();
   const nom = document.getElementById('nj-nom').value.trim();
   const code = document.getElementById('nj-code').value.trim().toUpperCase();
-  const email = document.getElementById('nj-email').value.trim();
   const errEl = document.getElementById('nj-error');
 
   if (!prenom || !nom) { errEl.textContent = 'Prénom et initiale du nom sont obligatoires.'; errEl.style.display = 'block'; return; }
@@ -2400,7 +2365,6 @@ async function createJeune() {
     const url = gsUrl('create_jeune',
         '&code=' + encodeURIComponent(code)
       + '&nom=' + encodeURIComponent(nomComplet)
-      + '&email=' + encodeURIComponent(email)
       + '&conseiller=' + encodeURIComponent(conseillerCode));
     const res = await fetch(url);
     const json = await res.json();
@@ -2422,10 +2386,6 @@ async function createJeune() {
   }
   btn.textContent = 'Créer le profil';
   btn.disabled = false;
-}
-
-function closePrefs() {
-  document.getElementById('modal-prefs').classList.remove('open');
 }
 
 // ── LECTURE DOSSIER (Sheet) ───────────────────────────────────────────────────
@@ -2468,8 +2428,7 @@ restoreSession();
 (function(){
   const closers = {
     'modal-overlay': closeModal,
-    'modal-new-jeune': closeNewJeune,
-    'modal-prefs': closePrefs
+    'modal-new-jeune': closeNewJeune
   };
 
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
