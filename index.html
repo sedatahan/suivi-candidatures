@@ -1071,10 +1071,12 @@ tr:last-child td { border-bottom: none; }
           <input type="text" id="nj-prenom" placeholder="Ex: Marco" oninput="generateCode()">
         </div>
         <div class="field">
-          <label>Nom *</label>
-          <input type="text" id="nj-nom" placeholder="Ex: Rossi" oninput="generateCode()">
+          <label>Initiale du nom *</label>
+          <input type="text" id="nj-nom" placeholder="R" maxlength="1"
+            oninput="this.value=this.value.replace(/[^a-zA-ZÀ-ÿ]/g,'').toUpperCase(); generateCode()">
         </div>
       </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:-8px;margin-bottom:8px">Seule l'initiale du nom est conservée, conformément au principe de minimisation des données.</div>
       <div class="field">
         <label>Code personnel (modifiable)</label>
         <input type="text" id="nj-code" placeholder="MAR2025" style="font-family:'DM Mono',monospace" oninput="this.value=this.value.toUpperCase()">
@@ -1440,7 +1442,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -2384,7 +2386,7 @@ async function createJeune() {
   const email = document.getElementById('nj-email').value.trim();
   const errEl = document.getElementById('nj-error');
 
-  if (!prenom || !nom) { errEl.textContent = 'Prénom et nom sont obligatoires.'; errEl.style.display = 'block'; return; }
+  if (!prenom || !nom) { errEl.textContent = 'Prénom et initiale du nom sont obligatoires.'; errEl.style.display = 'block'; return; }
   if (!code) { errEl.textContent = 'Le code personnel est obligatoire.'; errEl.style.display = 'block'; return; }
 
   const btn = document.getElementById('btn-create-jeune');
@@ -2393,7 +2395,7 @@ async function createJeune() {
   errEl.style.display = 'none';
 
   try {
-    const nomComplet = prenom + ' ' + nom;
+    const nomComplet = prenom + ' ' + nom.charAt(0).toUpperCase() + '.';
     const conseillerCode = currentConseiller ? currentConseiller.code : '';
     const url = gsUrl('create_jeune',
         '&code=' + encodeURIComponent(code)
