@@ -964,6 +964,7 @@ tr:last-child td { border-bottom: none; }
           <div style="font-size:16px;font-weight:600" id="archive-detail-name"></div>
           <div style="display:flex;gap:8px">
             <button class="btn-secondary" onclick="desarchiveJeune()" id="btn-desarchive" style="font-size:13px;padding:6px 12px;border-radius:8px;border:1.5px solid var(--border)">↩️ Désarchiver</button>
+            <button class="btn-danger" onclick="deleteJeunePermanently()" id="btn-delete-jeune" style="font-size:13px;padding:6px 12px">🗑️ Supprimer définitivement</button>
             <button class="btn-close" onclick="closeArchiveDetail()">Fermer ✕</button>
           </div>
         </div>
@@ -1435,7 +1436,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -2216,6 +2217,40 @@ async function desarchiveJeune() {
     toast("Erreur lors du désarchivage", true);
   }
   btn.textContent = '↩️ Désarchiver';
+  btn.disabled = false;
+}
+
+async function deleteJeunePermanently() {
+  if (!currentArchiveCode) return;
+  const jeune = archivesData.find(j => j.code === currentArchiveCode);
+  const nom = jeune ? jeune.nom : currentArchiveCode;
+  const code = currentArchiveCode;
+
+  if (!confirm('Supprimer DÉFINITIVEMENT le profil de ' + nom + ' (' + code + ') ?\n\nCette action est irréversible : le profil et toutes ses candidatures seront effacés sans possibilité de récupération.')) return;
+
+  const saisie = prompt('Pour confirmer, tapez le code exact du profil : ' + code);
+  if (saisie === null) return;
+  if (saisie.trim().toUpperCase() !== code.toUpperCase()) {
+    toast('Code incorrect, suppression annulée.', true);
+    return;
+  }
+
+  const btn = document.getElementById('btn-delete-jeune');
+  btn.textContent = 'Suppression...';
+  btn.disabled = true;
+
+  try {
+    await fetch(gsUrl('delete_jeune_permanently', '&code=' + encodeURIComponent(code)));
+    const res = await fetch(gsUrl('read_archives'));
+    archivesData = await res.json();
+    jeunesMap = await gsReadJeunes();
+    closeArchiveDetail();
+    renderArchivesList();
+    toast('Profil supprimé définitivement ✓');
+  } catch(e) {
+    toast('Erreur lors de la suppression', true);
+  }
+  btn.textContent = '🗑️ Supprimer définitivement';
   btn.disabled = false;
 }
 
