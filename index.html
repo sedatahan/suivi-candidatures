@@ -2381,9 +2381,12 @@ function closeNewJeune() {
 
 function generateCode() {
   const prenom = document.getElementById('nj-prenom').value.trim();
+  const nom = document.getElementById('nj-nom').value.trim();
   const annee = new Date().getFullYear();
   if (!prenom) { document.getElementById('nj-code').value = ''; return; }
-  const prefix = prenom.normalize('NFD').replace(/\u0300-\u036f/g, '').substring(0, 3).toUpperCase();
+  const prenomPart = prenom.normalize('NFD').replace(/\u0300-\u036f/g, '').substring(0, 2).toUpperCase();
+  const nomPart = nom.normalize('NFD').replace(/\u0300-\u036f/g, '').substring(0, 1).toUpperCase();
+  const prefix = prenomPart + nomPart;
   const baseCode = prefix + annee;
 
   // Si le code existe déjà, ajouter un suffixe B, C, D...
