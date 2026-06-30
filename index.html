@@ -1435,7 +1435,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -1840,6 +1840,8 @@ function openModal(id) {
   document.getElementById('f-notes').value = item?.notes || '';
 
   document.getElementById('modal-overlay').classList.add('open');
+  const modalEl = document.querySelector('#modal-overlay .modal');
+  if (modalEl) modalEl.scrollTop = 0;
   setTimeout(() => document.getElementById('f-enterprise').focus(), 100);
 }
 
@@ -2372,6 +2374,8 @@ function openNewJeune() {
   document.getElementById('nj-code').value = '';
   document.getElementById('nj-error').style.display = 'none';
   document.getElementById('modal-new-jeune').classList.add('open');
+  const njModalEl = document.querySelector('#modal-new-jeune .modal');
+  if (njModalEl) njModalEl.scrollTop = 0;
   setTimeout(() => document.getElementById('nj-prenom').focus(), 100);
 }
 
