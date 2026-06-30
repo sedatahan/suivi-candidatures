@@ -909,6 +909,11 @@ tr:last-child td { border-bottom: none; }
       <button class="filter-btn" onclick="setYouthFilter('Refus',this)">Refus</button>
       <button class="filter-btn" onclick="setYouthFilter('En attente',this)">En attente</button>
     </div>
+    <div class="filter-bar" id="youth-type-filter-bar" style="margin-bottom:14px">
+      <button class="filter-btn active" onclick="setYouthTypeFilter('all',this)">Tous types</button>
+      <button class="filter-btn" onclick="setYouthTypeFilter('Stage',this)">Stages</button>
+      <button class="filter-btn" onclick="setYouthTypeFilter('Apprentissage',this)">Apprentissages</button>
+    </div>
     <div id="youth-list"></div>
   </div>
 </div>
@@ -987,9 +992,14 @@ tr:last-child td { border-bottom: none; }
         <button class="filter-btn" onclick="setDetailFilter('Refus',this)">Refus</button>
         <button class="filter-btn" onclick="setDetailFilter('En attente',this)">En attente</button>
       </div>
+      <div class="filter-bar" id="detail-type-filter-bar" style="margin-bottom:14px">
+        <button class="filter-btn active" onclick="setDetailTypeFilter('all',this)">Tous types</button>
+        <button class="filter-btn" onclick="setDetailTypeFilter('Stage',this)">Stages</button>
+        <button class="filter-btn" onclick="setDetailTypeFilter('Apprentissage',this)">Apprentissages</button>
+      </div>
       <div class="table-wrap">
         <table id="detail-table">
-          <thead><tr><th>Entreprise</th><th>Métier</th><th>Date</th><th>Statut</th><th>Contact</th><th>Notes</th></tr></thead>
+          <thead><tr><th>Type</th><th>Entreprise</th><th>Métier</th><th>Date</th><th>Statut</th><th>Contact</th><th>Notes</th></tr></thead>
           <tbody id="detail-tbody"></tbody>
         </table>
       </div>
@@ -1005,6 +1015,14 @@ tr:last-child td { border-bottom: none; }
     <div class="modal-handle"></div>
     <div class="modal-title" id="modal-title">Nouvelle candidature</div>
     <div class="form-grid">
+      <div class="field">
+        <label>Type de demande *</label>
+        <select id="f-type">
+          <option value="">Sélectionner...</option>
+          <option value="Stage">Stage</option>
+          <option value="Apprentissage">Apprentissage</option>
+        </select>
+      </div>
       <div class="field">
         <label>Entreprise *</label>
         <input type="text" id="f-enterprise" placeholder="Nom de l'entreprise">
@@ -1417,7 +1435,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -1432,6 +1450,7 @@ let allData = {};
 let editingId = null;
 let counselorFilter = 'all';
 let youthFilter = 'all';
+let youthTypeFilter = 'all';
 let currentView = 'list'; // 'list' | 'bloc' | 'kanban'
 
 function setView(view) {
@@ -1441,6 +1460,7 @@ function setView(view) {
   renderYouth();
 }
 let detailFilter = 'all';
+let detailTypeFilter = 'all';
 let currentDetailCode = null;
 let currentDetailLastSeen = null; // date de lecture AVANT ouverture du dossier
 let jeunesMap = {}; // code -> nom
@@ -1450,6 +1470,20 @@ function setDetailFilter(filter, btn) {
   document.querySelectorAll('#detail-filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderDetailTable(currentDetailCode);
+}
+
+function setDetailTypeFilter(filter, btn) {
+  detailTypeFilter = filter;
+  document.querySelectorAll('#detail-type-filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDetailTable(currentDetailCode);
+}
+
+function setYouthTypeFilter(filter, btn) {
+  youthTypeFilter = filter;
+  document.querySelectorAll('#youth-type-filter-bar .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderYouth();
 }
 
 function setYouthFilter(filter, btn) {
@@ -1474,6 +1508,7 @@ async function gsRead() {
     if (!data[code]) data[code] = [];
     data[code].push({
       id: r.id || genId(),
+      type: r.type || '',
       entreprise: r.entreprise || '',
       metier: r.metier || '',
       date: parseSheetDate(r.date_envoi),
@@ -1509,6 +1544,7 @@ async function gsAppend(item) {
   const row = {
     code_jeune: currentUser,
     nom_jeune: currentUser,
+    type: item.type,
     entreprise: item.entreprise,
     metier: item.metier,
     date_envoi: item.date,
@@ -1529,6 +1565,7 @@ async function gsUpdate(item) {
   const row = {
     code_jeune: currentUser,
     nom_jeune: currentUser,
+    type: item.type,
     entreprise: item.entreprise,
     metier: item.metier,
     date_envoi: item.date,
@@ -1695,6 +1732,11 @@ function renderYouth() {
     );
   }
 
+  // Filtre par type (stage / apprentissage)
+  if (youthTypeFilter !== 'all') {
+    sorted = sorted.filter(i => i.type === youthTypeFilter);
+  }
+
   // Tri par statut prioritaire
   if (youthFilter !== 'all') {
     const priority = sorted.filter(i => i.statut === youthFilter);
@@ -1721,7 +1763,7 @@ function renderList(list, items) {
     return '<div class="cand-card' + (followup ? ' followup' : '') + '" onclick="openModal(\'' + item.id + '\')">'
       + '<div class="cand-top"><div>'
       + '<div class="cand-enterprise">' + item.entreprise + '</div>'
-      + '<div class="cand-metier">' + item.metier + '</div>'
+      + '<div class="cand-metier">' + item.metier + (item.type ? ' · ' + item.type : '') + '</div>'
       + '</div><span class="badge badge-' + item.statut + '">' + item.statut + '</span></div>'
       + '<div class="cand-bottom">'
       + '<span class="cand-date">' + (item.date ? formatDate(item.date) : 'Date non renseignée') + '</span>'
@@ -1739,7 +1781,7 @@ function renderBloc(list, items) {
     return '<div class="bloc-card' + (followup ? ' followup' : '') + '" onclick="openModal(\'' + item.id + '\')">'
       + '<span class="badge badge-' + item.statut + '" style="align-self:flex-start">' + item.statut + '</span>'
       + '<div class="bloc-enterprise">' + item.entreprise + '</div>'
-      + '<div class="bloc-metier">' + item.metier + '</div>'
+      + '<div class="bloc-metier">' + item.metier + (item.type ? ' · ' + item.type : '') + '</div>'
       + (followup ? '<div style="font-size:11px;color:#92590A;background:#FEF3C7;padding:2px 6px;border-radius:8px;margin-top:2px">⏰ À relancer</div>' : '')
       + '<div class="bloc-date">' + (item.date ? formatDate(item.date) : '—') + '</div>'
       + '</div>';
@@ -1764,7 +1806,7 @@ function renderKanban(list, items) {
           const days = daysSince(item.date);
           return '<div class="kanban-card' + (followup ? ' followup' : '') + '" onclick="openModal(\'' + item.id + '\')">'
             + '<div class="kanban-card-title">' + item.entreprise + '</div>'
-            + '<div class="kanban-card-sub">' + item.metier + '</div>'
+            + '<div class="kanban-card-sub">' + item.metier + (item.type ? ' · ' + item.type : '') + '</div>'
             + (followup ? '<div style="font-size:11px;color:#92590A;margin-top:4px">⏰ ' + days + 'j sans réponse</div>' : '')
             + '<div class="kanban-card-date">' + (item.date ? formatDate(item.date) : '—') + '</div>'
             + '</div>';
@@ -1787,6 +1829,7 @@ function openModal(id) {
   document.getElementById('modal-title').textContent = id ? 'Modifier la candidature' : 'Nouvelle candidature';
   document.getElementById('btn-delete').style.display = id ? '' : 'none';
 
+  document.getElementById('f-type').value = item?.type || '';
   document.getElementById('f-enterprise').value = item?.entreprise || '';
   document.getElementById('f-metier').value = item?.metier || '';
   document.getElementById('f-date').value = item?.date || todayISO();
@@ -1806,14 +1849,17 @@ function closeModal() {
 }
 
 async function saveCandidature() {
+  const type = document.getElementById('f-type').value;
   const enterprise = document.getElementById('f-enterprise').value.trim();
   const metier = document.getElementById('f-metier').value.trim();
+  if (!type) { toast("Choisissez le type de demande (stage ou apprentissage).", true); return; }
   if (!enterprise || !metier) { toast("Remplissez au moins l'entreprise et le métier.", true); return; }
 
   if (!allData[currentUser]) allData[currentUser] = [];
 
   const item = {
     id: editingId || genId(),
+    type: type,
     entreprise: enterprise,
     metier: metier,
     date: document.getElementById('f-date').value,
@@ -1958,7 +2004,9 @@ function showDetail(code) {
   currentDetailCode = code;
   currentDetailLastSeen = previousLastSeen;
   detailFilter = 'all';
+  detailTypeFilter = 'all';
   document.querySelectorAll('#detail-filter-bar .filter-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+  document.querySelectorAll('#detail-type-filter-bar .filter-btn').forEach((b,i) => b.classList.toggle('active', i===0));
   const items = allData[code] || [];
   const nomD = jeunesMap[code] || '';
   const titleD = nomD ? `${nomD} (${code}) — ${items.length} candidature${items.length>1?'s':''}` : `${code} — ${items.length} candidature${items.length>1?'s':''}`;
@@ -1972,9 +2020,10 @@ function renderDetailTable(code) {
   const items = allData[code] || [];
   let sorted = [...items].sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
   if (detailFilter !== 'all') sorted = sorted.filter(i => i.statut === detailFilter);
+  if (detailTypeFilter !== 'all') sorted = sorted.filter(i => i.type === detailTypeFilter);
   const tbody = document.getElementById('detail-tbody');
   if (!sorted.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Aucune candidature dans cette catégorie</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">Aucune candidature dans cette catégorie</td></tr>`;
     return;
   }
   // Utiliser la date de lecture AVANT ouverture (pas après)
@@ -1987,6 +2036,7 @@ function renderDetailTable(code) {
     const newBadge = isNew ? '<span style="font-size:10px;color:#1A56A4;background:#DBEAFE;padding:1px 7px;border-radius:10px;margin-left:6px;font-weight:700">Nouveau</span>' : '';
     const alertBadge = followup ? '<span style="font-size:11px;color:#92590A;background:#FEF3C7;padding:1px 6px;border-radius:10px;margin-left:4px">⏰ ' + days + 'j</span>' : '';
     return '<tr style="' + rowBg + '">'
+      + '<td style="font-size:12px;color:var(--text2);white-space:nowrap">' + (item.type || '—') + '</td>'
       + '<td><strong>' + item.entreprise + '</strong>' + newBadge + alertBadge + '</td>'
       + '<td>' + item.metier + '</td>'
       + '<td style="font-family:monospace;font-size:12px;white-space:nowrap">' + (item.date ? formatDate(item.date) : '—') + '</td>'
@@ -2002,6 +2052,7 @@ function closeDetail() {
   currentDetailCode = null;
   currentDetailLastSeen = null;
   detailFilter = 'all';
+  detailTypeFilter = 'all';
   renderCounselor(); // Rafraîchir les cartes pour enlever la pastille
 }
 
