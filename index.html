@@ -472,6 +472,41 @@ body {
   align-items: center;
   gap: 6px;
 }
+
+/* ── BANNIÈRE FAVORIS ── */
+.favoris-banner {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 10px; background: var(--accent-light); border: 1px solid var(--accent);
+  border-radius: var(--radius); padding: 10px 14px; margin-bottom: 14px;
+  font-size: 13px; color: var(--accent);
+}
+.favoris-banner-btn {
+  font-size: 12px; font-weight: 600; padding: 5px 11px;
+  border-radius: var(--radius-sm); border: 1.5px solid var(--accent);
+  background: var(--accent); color: #fff; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; white-space: nowrap; flex-shrink: 0;
+}
+.favoris-banner-dismiss {
+  font-size: 12px; color: var(--accent); background: none; border: none;
+  cursor: pointer; font-family: 'DM Sans', sans-serif; opacity: 0.7; padding: 0;
+}
+.autocomplete-item.favori { background: var(--accent-light); font-weight: 500; border-left: 3px solid var(--accent); }
+.autocomplete-item.favori::after { content: '★'; font-size: 11px; color: var(--accent); float: right; margin-top: 1px; }
+.favoris-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent-light); color: var(--accent);
+  border: 1px solid var(--accent); border-radius: 20px;
+  padding: 5px 12px; font-size: 13px; font-weight: 500; margin: 4px;
+}
+.favoris-tag-remove { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 15px; line-height: 1; padding: 0; opacity: 0.7; }
+
+/* ── IMPRESSION / PDF ── */
+@media print {
+  body * { visibility: hidden; }
+  #pdf-print-zone, #pdf-print-zone * { visibility: visible; }
+  #pdf-print-zone { position: fixed; inset: 0; background: #fff; padding: 24px 28px; z-index: 9999; font-family: 'DM Sans', sans-serif; }
+}
+
 .cand-card.followup {
   border-color: #F59E0B;
   box-shadow: 0 0 0 2px rgba(245,158,11,0.15);
@@ -884,9 +919,21 @@ tr:last-child td { border-bottom: none; }
       <div class="stat-card"><div class="stat-num" id="stat-refus" style="color:var(--refus-dot)">—</div><div class="stat-lbl">Refus</div></div>
     </div>
 
+    <div id="favoris-banner" class="favoris-banner" style="display:none">
+      <div style="flex:1;line-height:1.5">
+        <strong>Aucun projet défini</strong><br>
+        <span style="font-size:12px;opacity:0.85">Ajoutez jusqu'à 3 métiers favoris pour les retrouver en tête de liste lors de vos candidatures.</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <button class="favoris-banner-btn" onclick="openFavorisModal()">Définir mes projets</button>
+        <button class="favoris-banner-dismiss" onclick="dismissFavorisBanner()">Plus tard</button>
+      </div>
+    </div>
+
     <div class="section-header">
       <div class="section-title">Mes candidatures</div>
       <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn-logout" onclick="exportPDF('youth')" title="Exporter en PDF" style="padding:5px 10px;font-size:13px">⬇ PDF</button>
         <div class="view-switcher">
           <button class="view-btn active" id="vbtn-list" onclick="setView('list')" title="Vue liste">☰</button>
           <button class="view-btn" id="vbtn-bloc" onclick="setView('bloc')" title="Vue blocs">⊞</button>
@@ -981,6 +1028,7 @@ tr:last-child td { border-bottom: none; }
       <div class="detail-header">
         <div class="detail-name" id="detail-name"></div>
         <div style="display:flex;gap:8px">
+          <button class="btn-logout" onclick="exportPDF('counselor')" title="Exporter en PDF" style="padding:5px 10px;font-size:13px">⬇ PDF</button>
           <button class="btn-danger" onclick="archiveJeune()" id="btn-archive">📦 Archiver</button>
           <button class="btn-close" onclick="closeDetail()">Fermer ✕</button>
         </div>
@@ -1109,6 +1157,38 @@ tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
+<!-- ══ MODAL FAVORIS MÉTIERS ════════════════════════════════════════════════ -->
+<div id="modal-favoris" class="modal-overlay" onclick="if(event.target===this)closeFavorisModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Mes projets favoris</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Ajoutez jusqu'à 3 métiers ou formations. Ils apparaîtront en tête de liste lors de vos candidatures.</p>
+
+    <div id="favoris-tags-container" style="min-height:40px;margin-bottom:16px"></div>
+
+    <div id="favoris-add-section" class="field autocomplete-wrap">
+      <label>Ajouter un métier</label>
+      <input type="text" id="favoris-input" placeholder="Ex: Cuisinier CFC"
+        oninput="showFavorisSuggestions(this.value)"
+        onkeydown="handleFavorisKey(event)"
+        autocomplete="off">
+      <div id="favoris-suggestions" class="autocomplete-list" style="display:none"></div>
+    </div>
+
+    <div id="favoris-limit-msg" style="display:none;font-size:12px;color:var(--text2);margin-bottom:12px">
+      3 projets maximum atteints. Supprimez-en un pour pouvoir en ajouter un autre.
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeFavorisModal()">Annuler</button>
+      <button class="btn-primary" onclick="saveFavoris()" id="btn-save-favoris">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ZONE IMPRESSION PDF ══════════════════════════════════════════════════ -->
+<div id="pdf-print-zone" style="display:none"></div>
+
 <div id="toast" class="toast"></div>
 
 <script>
@@ -1117,6 +1197,7 @@ const SHEET_ID = '1H50lIMQwGTzT-eSHjTClc5pguPiwWX8cxC_4LCkH74c';
 // Mot de passe supprimé — authentification via Google Sheets
 let currentConseiller = null; // { code, nom }
 let youthConseiller = ''; // code conseiller du jeune connecté
+let youthFavoris = []; // liste des métiers favoris du jeune (max 3)
 
 // ── SESSION PERSISTANTE ───────────────────────────────────────────────────────
 function saveSession() {
@@ -1159,8 +1240,17 @@ async function restoreSession() {
       currentUser = user;
       currentRole = 'youth';
       document.getElementById('youth-header-code').textContent = user;
+      // Recharger les favoris depuis le Sheet
+      try {
+        const resFav = await fetch(gsUrl('check_code', '&code=' + encodeURIComponent(user)));
+        const jsonFav = await resFav.json();
+        youthFavoris = jsonFav.favoris ? jsonFav.favoris.split('|').filter(Boolean) : [];
+      } catch(e) { youthFavoris = []; }
       allData = await gsRead();
       if (!allData[user]) allData[user] = [];
+      showScreen('youth');
+      renderYouth();
+      checkFavorisBanner();
       showScreen('youth');
       renderYouth();
     }
@@ -1436,7 +1526,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -1613,11 +1703,14 @@ async function loginYouth() {
     currentRole = 'youth';
     document.getElementById('youth-header-code').textContent = json.nom ? json.nom : code;
     youthConseiller = json.conseiller || '';
+    youthFavoris = json.favoris ? json.favoris.split('|').filter(Boolean) : [];
+    favorisBannerDismissed = false;
     btnLogin.textContent = 'Chargement...';
     allData = await gsRead();
     if (!allData[code]) allData[code] = [];
     showScreen('youth');
     renderYouth();
+    checkFavorisBanner();
     saveSession();
   } catch(e) {
     showError('Erreur de connexion. Vérifie ta connexion internet.');
@@ -1672,7 +1765,7 @@ async function loginCounselor() {
 }
 
 function logout() {
-  currentUser = null; currentRole = null; currentConseiller = null; youthConseiller = ''; allData = {}; youthFilter = 'all';
+  currentUser = null; currentRole = null; currentConseiller = null; youthConseiller = ''; allData = {}; youthFilter = 'all'; youthFavoris = []; favorisBannerDismissed = false;
   clearSession();
   showScreen('login');
   document.getElementById('youth-code').value = '';
@@ -2524,7 +2617,8 @@ restoreSession();
 (function(){
   const closers = {
     'modal-overlay': closeModal,
-    'modal-new-jeune': closeNewJeune
+    'modal-new-jeune': closeNewJeune,
+    'modal-favoris': closeFavorisModal
   };
 
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
@@ -2575,6 +2669,286 @@ restoreSession();
     });
   });
 })();
+
+// ── FAVORIS MÉTIERS ──────────────────────────────────────────────────────────
+
+let favorisBannerDismissed = false;
+
+function checkFavorisBanner() {
+  const banner = document.getElementById('favoris-banner');
+  if (!banner) return;
+  // N'affiche la bannière que si : aucun favori défini, non dismissée, et pas déjà 1 seul projet
+  if (youthFavoris.length === 0 && !favorisBannerDismissed) {
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function dismissFavorisBanner() {
+  favorisBannerDismissed = true;
+  document.getElementById('favoris-banner').style.display = 'none';
+}
+
+function openFavorisModal() {
+  document.getElementById('modal-favoris').classList.add('open');
+  const modalEl = document.querySelector('#modal-favoris .modal');
+  if (modalEl) modalEl.scrollTop = 0;
+  renderFavorisTags();
+  document.getElementById('favoris-input').value = '';
+  document.getElementById('favoris-suggestions').style.display = 'none';
+  updateFavorisLimitMsg();
+}
+
+function closeFavorisModal() {
+  document.getElementById('modal-favoris').classList.remove('open');
+  document.getElementById('favoris-input').value = '';
+  document.getElementById('favoris-suggestions').style.display = 'none';
+}
+
+function renderFavorisTags() {
+  const container = document.getElementById('favoris-tags-container');
+  if (!youthFavoris.length) {
+    container.innerHTML = '<span style="font-size:13px;color:var(--text3)">Aucun projet défini pour l\'instant.</span>';
+    return;
+  }
+  container.innerHTML = youthFavoris.map((m, i) =>
+    '<span class="favoris-tag">' + m +
+    '<button class="favoris-tag-remove" onclick="removeFavori(' + i + ')" aria-label="Supprimer">×</button>' +
+    '</span>'
+  ).join('');
+}
+
+function removeFavori(idx) {
+  youthFavoris.splice(idx, 1);
+  renderFavorisTags();
+  updateFavorisLimitMsg();
+}
+
+function updateFavorisLimitMsg() {
+  const addSection = document.getElementById('favoris-add-section');
+  const limitMsg = document.getElementById('favoris-limit-msg');
+  if (youthFavoris.length >= 3) {
+    addSection.style.display = 'none';
+    limitMsg.style.display = 'block';
+  } else {
+    addSection.style.display = 'block';
+    limitMsg.style.display = 'none';
+  }
+}
+
+let favorisSuggestionIdx = -1;
+
+function showFavorisSuggestions(val) {
+  const list = document.getElementById('favoris-suggestions');
+  if (!val || val.length < 2) { list.style.display = 'none'; return; }
+  const query = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const matches = METIERS_SUISSE.filter(m => {
+    const norm = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return norm.includes(query) && !youthFavoris.includes(m);
+  }).slice(0, 6);
+  if (!matches.length) { list.style.display = 'none'; return; }
+  favorisSuggestionIdx = -1;
+  list.innerHTML = matches.map((m, i) => {
+    const norm = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const idx = norm.indexOf(query);
+    const highlighted = idx >= 0
+      ? m.substring(0, idx) + '<strong>' + m.substring(idx, idx + val.length) + '</strong>' + m.substring(idx + val.length)
+      : m;
+    const safe = m.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return '<div class="autocomplete-item" data-idx="' + i + '" onmousedown="addFavoriFromSuggestion(\'' + safe + '\')">' + highlighted + '</div>';
+  }).join('');
+  list.style.display = 'block';
+}
+
+function addFavoriFromSuggestion(metier) {
+  if (youthFavoris.length >= 3) return;
+  if (!youthFavoris.includes(metier)) youthFavoris.push(metier);
+  document.getElementById('favoris-input').value = '';
+  document.getElementById('favoris-suggestions').style.display = 'none';
+  renderFavorisTags();
+  updateFavorisLimitMsg();
+}
+
+function handleFavorisKey(e) {
+  const list = document.getElementById('favoris-suggestions');
+  const items = list.querySelectorAll('.autocomplete-item');
+  if (!items.length || list.style.display === 'none') return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    favorisSuggestionIdx = Math.min(favorisSuggestionIdx + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('selected', i === favorisSuggestionIdx));
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    favorisSuggestionIdx = Math.max(favorisSuggestionIdx - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('selected', i === favorisSuggestionIdx));
+  } else if (e.key === 'Enter' && favorisSuggestionIdx >= 0) {
+    e.preventDefault();
+    items[favorisSuggestionIdx].dispatchEvent(new MouseEvent('mousedown'));
+  } else if (e.key === 'Escape') {
+    list.style.display = 'none';
+  }
+}
+
+async function saveFavoris() {
+  const btn = document.getElementById('btn-save-favoris');
+  btn.textContent = 'Enregistrement...';
+  btn.disabled = true;
+  try {
+    const favorisStr = youthFavoris.join('|');
+    await fetch(gsUrl('save_favoris', '&code=' + encodeURIComponent(currentUser) + '&favoris=' + encodeURIComponent(favorisStr)));
+    closeFavorisModal();
+    checkFavorisBanner();
+    toast('Projets favoris enregistrés ✓');
+  } catch(e) {
+    toast('Erreur lors de l\'enregistrement', true);
+  }
+  btn.textContent = 'Enregistrer';
+  btn.disabled = false;
+}
+
+// ── AUTOCOMPLETE MÉTIER : Favoris en priorité ─────────────────────────────
+
+function showMetierSuggestions(val) {
+  const list = document.getElementById('metier-suggestions');
+  if (!val || val.length < 2) { list.style.display = 'none'; return; }
+
+  const query = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const matches = METIERS_SUISSE.filter(m => {
+    const norm = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return norm.includes(query);
+  });
+
+  // Favoris correspondants en premier, reste ensuite
+  const favorisMatches = matches.filter(m => youthFavoris.includes(m));
+  const otherMatches = matches.filter(m => !youthFavoris.includes(m));
+  const sorted = [...favorisMatches, ...otherMatches].slice(0, 8);
+
+  if (!sorted.length) { list.style.display = 'none'; return; }
+
+  selectedSuggestionIdx = -1;
+  list.innerHTML = sorted.map((m, i) => {
+    const norm = m.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const idx = norm.indexOf(query);
+    const highlighted = idx >= 0
+      ? m.substring(0, idx) + '<strong>' + m.substring(idx, idx + val.length) + '</strong>' + m.substring(idx + val.length)
+      : m;
+    const safeMetier = m.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const isFavori = youthFavoris.includes(m);
+    return '<div class="autocomplete-item' + (isFavori ? ' favori' : '') + '" data-idx="' + i + '" onmousedown="selectMetier(\'' + safeMetier + '\')">' + highlighted + '</div>';
+  }).join('');
+  list.style.display = 'block';
+}
+
+// ── EXPORT PDF ────────────────────────────────────────────────────────────────
+
+function exportPDF(mode) {
+  let nom, items, filtreStatut, filtreType, conseillerCode;
+
+  if (mode === 'youth') {
+    nom = currentUser;
+    const rawItems = allData[currentUser] || [];
+    items = [...rawItems].sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+    if (youthFilter !== 'all') items = items.filter(i => i.statut === youthFilter);
+    if (youthTypeFilter !== 'all') items = items.filter(i => i.type === youthTypeFilter);
+    filtreStatut = youthFilter !== 'all' ? youthFilter : null;
+    filtreType = youthTypeFilter !== 'all' ? youthTypeFilter : null;
+    conseillerCode = youthConseiller || '';
+  } else {
+    nom = jeunesMap[currentDetailCode] || currentDetailCode;
+    const rawItems = allData[currentDetailCode] || [];
+    items = [...rawItems].sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+    if (detailFilter !== 'all') items = items.filter(i => i.statut === detailFilter);
+    if (detailTypeFilter !== 'all') items = items.filter(i => i.type === detailTypeFilter);
+    filtreStatut = detailFilter !== 'all' ? detailFilter : null;
+    filtreType = detailTypeFilter !== 'all' ? detailTypeFilter : null;
+    conseillerCode = currentConseiller ? currentConseiller.code : '';
+  }
+
+  const dateExport = new Date().toLocaleDateString('fr-CH', { day:'2-digit', month:'long', year:'numeric' });
+  const total = items.length;
+  const nb = (statut) => items.filter(i => i.statut === statut).length;
+  const filtresActifs = [filtreType, filtreStatut].filter(Boolean);
+
+  const statsHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
+      ${[
+        ['Total', total, '#2A2118'],
+        ['Entretiens', nb('Entretien'), '#065F46'],
+        ['En cours', nb('Envoyée') + nb('Relancée') + nb('En attente'), '#3730A3'],
+        ['Refus', nb('Refus'), '#991B1B']
+      ].map(([lbl, val, color]) => `
+        <div style="text-align:center;border:1px solid #E8DFD3;border-radius:8px;padding:10px 6px">
+          <div style="font-size:22px;font-weight:500;color:${color}">${val}</div>
+          <div style="font-size:10px;color:#9C8878;margin-top:2px">${lbl}</div>
+        </div>`).join('')}
+    </div>`;
+
+  const groupByType = (list) => {
+    const stages = list.filter(i => i.type === 'Stage');
+    const apprs = list.filter(i => i.type === 'Apprentissage');
+    const autres = list.filter(i => !i.type || (i.type !== 'Stage' && i.type !== 'Apprentissage'));
+    const groups = [];
+    if (stages.length) groups.push({ label: 'Stages', items: stages });
+    if (apprs.length) groups.push({ label: 'Apprentissages', items: apprs });
+    if (autres.length) groups.push({ label: 'Autres', items: autres });
+    return groups;
+  };
+
+  const STATUT_STYLE = {
+    'Envoyée':   { bg:'#EEF2FF', color:'#3730A3' },
+    'Relancée':  { bg:'#FFF8E6', color:'#92590A' },
+    'Entretien': { bg:'#ECFDF5', color:'#065F46' },
+    'Refus':     { bg:'#FEF2F2', color:'#991B1B' },
+    'En attente':{ bg:'#F0EDE5', color:'#7A6A58' },
+  };
+
+  const cardHTML = (item) => {
+    const st = STATUT_STYLE[item.statut] || { bg:'#F0EDE5', color:'#7A6A58' };
+    return `<div style="border:1px solid #E8DFD3;border-radius:8px;padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:6px;align-items:start">
+      <div>
+        <div style="font-size:13px;font-weight:500;color:#2A2118">${item.entreprise}</div>
+        <div style="font-size:11px;color:#9C8878;margin-top:2px">${item.metier}${item.contact ? ' · Contact : ' + item.contact : ''}${item.telephone ? ' · ' + item.telephone : ''}</div>
+        <div style="font-size:10px;color:#B5A593;margin-top:3px">${item.date ? 'Envoyée le ' + new Date(item.date + 'T12:00:00').toLocaleDateString('fr-CH') : '—'}</div>
+        ${item.notes ? '<div style="font-size:11px;color:#9C8878;margin-top:4px;font-style:italic">' + item.notes + '</div>' : ''}
+      </div>
+      <span style="font-size:11px;padding:3px 8px;border-radius:12px;background:${st.bg};color:${st.color};white-space:nowrap;font-weight:500">${item.statut}</span>
+    </div>`;
+  };
+
+  const groups = filtreType ? [{ label: filtreType + 's', items }] : groupByType(items);
+
+  const groupsHTML = groups.map(g => `
+    <div style="font-size:10px;font-weight:500;color:#9C8878;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;margin-top:16px">${g.label}</div>
+    ${g.items.map(cardHTML).join('')}
+  `).join('');
+
+  const filtreLine = filtresActifs.length
+    ? `<div style="font-size:11px;color:#9C8878;margin-top:4px">Filtres : ${filtresActifs.join(' · ')}</div>` : '';
+
+  const html = `
+    <div style="font-family:'DM Sans',system-ui,sans-serif;color:#2A2118;max-width:640px;margin:0 auto">
+      <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #E8DFD3">
+        <div style="font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:#9C8878;margin-bottom:6px">CAP Formations</div>
+        <div style="font-size:22px;font-weight:500">${nom}</div>
+        <div style="font-size:12px;color:#9C8878;margin-top:4px">Suivi des candidatures · ${conseillerCode ? 'Conseiller ' + conseillerCode + ' · ' : ''}${dateExport}</div>
+        ${filtreLine}
+      </div>
+      ${statsHTML}
+      ${!items.length ? '<div style="text-align:center;color:#B5A593;padding:24px">Aucune candidature avec les filtres sélectionnés.</div>' : groupsHTML}
+      <div style="margin-top:20px;padding-top:12px;border-top:1px solid #E8DFD3;display:flex;justify-content:space-between;font-size:10px;color:#B5A593">
+        <span>${filtresActifs.length ? 'Filtres : ' + filtresActifs.join(', ') : 'Toutes candidatures'}</span>
+        <span>${total} candidature${total > 1 ? 's' : ''}</span>
+      </div>
+    </div>`;
+
+  const zone = document.getElementById('pdf-print-zone');
+  zone.innerHTML = html;
+  zone.style.display = 'block';
+  window.print();
+  zone.style.display = 'none';
+}
 
 // ── ANIMATION AVION EN PAPIER (écran de connexion) ──
 (function(){
