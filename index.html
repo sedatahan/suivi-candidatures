@@ -499,6 +499,17 @@ body {
   padding: 5px 12px; font-size: 13px; font-weight: 500; margin: 4px;
 }
 .favoris-tag-remove { background: none; border: none; cursor: pointer; color: var(--accent); font-size: 15px; line-height: 1; padding: 0; opacity: 0.7; }
+/* Petits badges favoris pour header et détail conseiller */
+.favori-pill {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  white-space: nowrap;
+}
 
 /* ── IMPRESSION / PDF ── */
 @media print {
@@ -908,8 +919,8 @@ tr:last-child td { border-bottom: none; }
     <div class="header-brand">Candidatures</div>
     <div class="header-user">
       <span class="header-badge" id="youth-header-code"></span>
+      <div id="youth-favoris-header" style="display:flex;gap:4px;align-items:center;margin-right:6px"></div>
       <button class="btn-logout" onclick="refreshYouth()" style="margin-right:6px" title="Rafraîchir">↻</button>
-      <button class="btn-logout" onclick="openFavorisModal()" style="margin-right:6px" title="Mes projets favoris">★</button>
       <button class="btn-logout" onclick="logout()">Quitter</button>
     </div>
   </div>
@@ -1028,7 +1039,10 @@ tr:last-child td { border-bottom: none; }
 
     <div id="detail-panel" class="detail-panel">
       <div class="detail-header">
-        <div class="detail-name" id="detail-name"></div>
+        <div>
+          <div class="detail-name" id="detail-name"></div>
+          <div id="detail-favoris" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px"></div>
+        </div>
         <div style="display:flex;gap:8px">
           <button class="btn-logout" onclick="exportPDF('counselor')" title="Exporter en PDF" style="padding:5px 10px;font-size:13px">⬇ PDF</button>
           <button class="btn-danger" onclick="archiveJeune()" id="btn-archive">📦 Archiver</button>
@@ -1081,10 +1095,12 @@ tr:last-child td { border-bottom: none; }
       <div class="field autocomplete-wrap">
         <label>Métier / Formation *</label>
         <input type="text" id="f-metier" placeholder="Ex: Cuisinier AFP"
-          oninput="showMetierSuggestions(this.value)"
+          oninput="showMetierSuggestions(this.value); validateMetierField(this);"
           onfocus="showMetierSuggestionsOnFocus()"
+          onblur="validateMetierOnBlur()"
           onkeydown="handleMetierKey(event)"
           autocomplete="off">
+        <div id="metier-error" style="display:none;font-size:12px;color:var(--refus-text);margin-top:4px">Ce métier n'est pas dans la liste. Sélectionnez une suggestion.</div>
         <div id="metier-suggestions" class="autocomplete-list" style="display:none"></div>
       </div>
       <div class="field">
@@ -1529,7 +1545,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -1953,6 +1969,12 @@ async function saveCandidature() {
   const metier = document.getElementById('f-metier').value.trim();
   if (!type) { toast("Choisissez le type de demande (stage ou apprentissage).", true); return; }
   if (!enterprise || !metier) { toast("Remplissez au moins l'entreprise et le métier.", true); return; }
+  if (!METIERS_SUISSE.includes(metier)) {
+    document.getElementById('metier-error').style.display = 'block';
+    document.getElementById('f-metier').focus();
+    toast("Sélectionnez un métier dans la liste.", true);
+    return;
+  }
 
   if (!allData[currentUser]) allData[currentUser] = [];
 
@@ -2094,11 +2116,8 @@ function filterCounselor(filter, btn) {
 }
 
 function showDetail(code) {
-  // Sauvegarder l'ancienne date AVANT de mettre à jour
   const previousLastSeen = lastSeenMap[code] || null;
-  // Mettre à jour localement immédiatement
   lastSeenMap[code] = new Date().toISOString();
-  // Envoyer au Sheet en arrière-plan
   markAsSeenSheet(code);
   currentDetailCode = code;
   currentDetailLastSeen = previousLastSeen;
@@ -2110,6 +2129,14 @@ function showDetail(code) {
   const nomD = jeunesMap[code] || '';
   const titleD = nomD ? `${nomD} (${code}) — ${items.length} candidature${items.length>1?'s':''}` : `${code} — ${items.length} candidature${items.length>1?'s':''}`;
   document.getElementById('detail-name').textContent = titleD;
+  // Charger les favoris du jeune
+  renderDetailFavoris([]);
+  fetch(gsUrl('check_code', '&code=' + encodeURIComponent(code)))
+    .then(r => r.json())
+    .then(json => {
+      const favs = json.favoris ? json.favoris.split('|').filter(Boolean) : [];
+      renderDetailFavoris(favs);
+    }).catch(() => {});
   renderDetailTable(code);
   document.getElementById('detail-panel').classList.add('open');
   document.getElementById('detail-panel').scrollIntoView({behavior:'smooth', block:'nearest'});
@@ -2441,36 +2468,12 @@ async function refreshCounselor() {
 // ── AUTOCOMPLETE MÉTIERS ─────────────────────────────────────────────────────
 let selectedSuggestionIdx = -1;
 
-function showMetierSuggestions(val) {
-  const list = document.getElementById('metier-suggestions');
-  if (!val || val.length < 2) { list.style.display = 'none'; return; }
-
-  const query = val.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  const matches = METIERS_SUISSE.filter(m => {
-    const norm = m.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    return norm.includes(query);
-  }).slice(0, 8);
-
-  if (!matches.length) { list.style.display = 'none'; return; }
-
-  selectedSuggestionIdx = -1;
-  list.innerHTML = matches.map((m, i) => {
-    // Highlight matching part
-    const norm = m.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-    const idx = norm.indexOf(query);
-    const highlighted = idx >= 0
-      ? m.substring(0, idx) + '<strong>' + m.substring(idx, idx + val.length) + '</strong>' + m.substring(idx + val.length)
-      : m;
-    const safeMetier = m.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    return '<div class="autocomplete-item" data-idx="' + i + '" onmousedown="selectMetier(\'' + safeMetier + '\')">'+highlighted+'</div>';
-  }).join('');
-  list.style.display = 'block';
-}
-
 function selectMetier(metier) {
   document.getElementById('f-metier').value = metier;
+  document.getElementById('metier-error').style.display = 'none';
   document.getElementById('metier-suggestions').style.display = 'none';
 }
+
 
 function handleMetierKey(e) {
   const list = document.getElementById('metier-suggestions');
@@ -2680,12 +2683,36 @@ let favorisBannerDismissed = false;
 function checkFavorisBanner() {
   const banner = document.getElementById('favoris-banner');
   if (!banner) return;
-  // N'affiche la bannière que si : aucun favori défini, non dismissée, et pas déjà 1 seul projet
   if (youthFavoris.length === 0 && !favorisBannerDismissed) {
     banner.style.display = 'flex';
   } else {
     banner.style.display = 'none';
   }
+  renderFavorisHeader();
+}
+
+function renderFavorisHeader() {
+  const container = document.getElementById('youth-favoris-header');
+  if (!container) return;
+  if (!youthFavoris.length) {
+    container.innerHTML = '<button class="btn-logout" onclick="openFavorisModal()" title="Définir mes projets" style="font-size:11px;opacity:0.7">★ Projets</button>';
+    return;
+  }
+  container.innerHTML = youthFavoris.map(m =>
+    '<span class="favori-pill" onclick="openFavorisModal()" style="cursor:pointer" title="Modifier mes projets">★ ' + m + '</span>'
+  ).join('');
+}
+
+function renderDetailFavoris(favoris) {
+  const container = document.getElementById('detail-favoris');
+  if (!container) return;
+  if (!favoris || !favoris.length) {
+    container.innerHTML = '<span style="font-size:11px;color:var(--text3)">Aucun projet favori défini</span>';
+    return;
+  }
+  container.innerHTML = favoris.map(m =>
+    '<span class="favori-pill">★ ' + m + '</span>'
+  ).join('');
 }
 
 function dismissFavorisBanner() {
@@ -2802,6 +2829,7 @@ async function saveFavoris() {
     await fetch(gsUrl('save_favoris', '&code=' + encodeURIComponent(currentUser) + '&favoris=' + encodeURIComponent(favorisStr)));
     closeFavorisModal();
     checkFavorisBanner();
+    renderFavorisHeader();
     toast('Projets favoris enregistrés ✓');
   } catch(e) {
     toast('Erreur lors de l\'enregistrement', true);
@@ -2812,8 +2840,35 @@ async function saveFavoris() {
 
 // ── AUTOCOMPLETE MÉTIER : Favoris en priorité ─────────────────────────────
 
+function validateMetierField(input) {
+  const val = input.value.trim();
+  const errEl = document.getElementById('metier-error');
+  if (!val) { errEl.style.display = 'none'; return; }
+  const isValid = METIERS_SUISSE.includes(val);
+  errEl.style.display = isValid ? 'none' : 'block';
+}
+
+function validateMetierOnBlur() {
+  const input = document.getElementById('f-metier');
+  const val = input.value.trim();
+  const errEl = document.getElementById('metier-error');
+  if (!val) { errEl.style.display = 'none'; return; }
+  const isValid = METIERS_SUISSE.includes(val);
+  if (!isValid) {
+    errEl.style.display = 'block';
+  } else {
+    errEl.style.display = 'none';
+    document.getElementById('metier-suggestions').style.display = 'none';
+  }
+}
+
+function isMetierValid() {
+  const val = document.getElementById('f-metier').value.trim();
+  return !val || METIERS_SUISSE.includes(val);
+}
+
+
 function showMetierSuggestionsOnFocus() {
-  // Si le champ est vide et qu'il y a des favoris, on les affiche directement
   const val = document.getElementById('f-metier').value;
   if (!val && youthFavoris.length > 0) {
     const list = document.getElementById('metier-suggestions');
