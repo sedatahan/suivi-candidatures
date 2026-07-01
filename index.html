@@ -534,13 +534,14 @@ body {
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   width: 100%;
   max-width: 520px;
-  padding: 24px 20px 32px;
-  max-height: 92vh;
+  padding: 24px 20px 48px;
+  padding-bottom: calc(48px + env(safe-area-inset-bottom));
+  max-height: 90vh;
   overflow-y: auto;
   box-sizing: border-box;
   touch-action: pan-y;
 }
-@media (min-width: 600px) { .modal { border-radius: var(--radius-lg); } }
+@media (min-width: 600px) { .modal { border-radius: var(--radius-lg); padding-bottom: 32px; } }
 
 .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
 .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
@@ -908,6 +909,7 @@ tr:last-child td { border-bottom: none; }
     <div class="header-user">
       <span class="header-badge" id="youth-header-code"></span>
       <button class="btn-logout" onclick="refreshYouth()" style="margin-right:6px" title="Rafraîchir">↻</button>
+      <button class="btn-logout" onclick="openFavorisModal()" style="margin-right:6px" title="Mes projets favoris">★</button>
       <button class="btn-logout" onclick="logout()">Quitter</button>
     </div>
   </div>
@@ -1080,6 +1082,7 @@ tr:last-child td { border-bottom: none; }
         <label>Métier / Formation *</label>
         <input type="text" id="f-metier" placeholder="Ex: Cuisinier AFP"
           oninput="showMetierSuggestions(this.value)"
+          onfocus="showMetierSuggestionsOnFocus()"
           onkeydown="handleMetierKey(event)"
           autocomplete="off">
         <div id="metier-suggestions" class="autocomplete-list" style="display:none"></div>
@@ -1526,7 +1529,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -2809,9 +2812,40 @@ async function saveFavoris() {
 
 // ── AUTOCOMPLETE MÉTIER : Favoris en priorité ─────────────────────────────
 
+function showMetierSuggestionsOnFocus() {
+  // Si le champ est vide et qu'il y a des favoris, on les affiche directement
+  const val = document.getElementById('f-metier').value;
+  if (!val && youthFavoris.length > 0) {
+    const list = document.getElementById('metier-suggestions');
+    selectedSuggestionIdx = -1;
+    list.innerHTML = youthFavoris.map((m, i) => {
+      const safe = m.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return '<div class="autocomplete-item favori" data-idx="' + i + '" onmousedown="selectMetier(\'' + safe + '\')">' + m + '</div>';
+    }).join('');
+    list.style.display = 'block';
+  } else {
+    showMetierSuggestions(val);
+  }
+}
+
 function showMetierSuggestions(val) {
   const list = document.getElementById('metier-suggestions');
-  if (!val || val.length < 2) { list.style.display = 'none'; return; }
+
+  // Si champ vide : afficher les favoris si disponibles, sinon fermer
+  if (!val || val.length === 0) {
+    if (youthFavoris.length > 0) {
+      selectedSuggestionIdx = -1;
+      list.innerHTML = youthFavoris.map((m, i) => {
+        const safe = m.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return '<div class="autocomplete-item favori" data-idx="' + i + '" onmousedown="selectMetier(\'' + safe + '\')">' + m + '</div>';
+      }).join('');
+      list.style.display = 'block';
+    } else {
+      list.style.display = 'none';
+    }
+    return;
+  }
+  if (val.length < 2) { list.style.display = 'none'; return; }
 
   const query = val.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
@@ -2871,83 +2905,105 @@ function exportPDF(mode) {
   const nb = (statut) => items.filter(i => i.statut === statut).length;
   const filtresActifs = [filtreType, filtreStatut].filter(Boolean);
 
-  const statsHTML = `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">
-      ${[
-        ['Total', total, '#2A2118'],
-        ['Entretiens', nb('Entretien'), '#065F46'],
-        ['En cours', nb('Envoyée') + nb('Relancée') + nb('En attente'), '#3730A3'],
-        ['Refus', nb('Refus'), '#991B1B']
-      ].map(([lbl, val, color]) => `
-        <div style="text-align:center;border:1px solid #E8DFD3;border-radius:8px;padding:10px 6px">
-          <div style="font-size:22px;font-weight:500;color:${color}">${val}</div>
-          <div style="font-size:10px;color:#9C8878;margin-top:2px">${lbl}</div>
-        </div>`).join('')}
-    </div>`;
-
-  const groupByType = (list) => {
-    const stages = list.filter(i => i.type === 'Stage');
-    const apprs = list.filter(i => i.type === 'Apprentissage');
-    const autres = list.filter(i => !i.type || (i.type !== 'Stage' && i.type !== 'Apprentissage'));
-    const groups = [];
-    if (stages.length) groups.push({ label: 'Stages', items: stages });
-    if (apprs.length) groups.push({ label: 'Apprentissages', items: apprs });
-    if (autres.length) groups.push({ label: 'Autres', items: autres });
-    return groups;
-  };
-
   const STATUT_STYLE = {
-    'Envoyée':   { bg:'#EEF2FF', color:'#3730A3' },
-    'Relancée':  { bg:'#FFF8E6', color:'#92590A' },
-    'Entretien': { bg:'#ECFDF5', color:'#065F46' },
-    'Refus':     { bg:'#FEF2F2', color:'#991B1B' },
-    'En attente':{ bg:'#F0EDE5', color:'#7A6A58' },
+    'Envoyée':    { bg:'#EEF2FF', color:'#3730A3' },
+    'Relancée':   { bg:'#FFF8E6', color:'#92590A' },
+    'Entretien':  { bg:'#ECFDF5', color:'#065F46' },
+    'Refus':      { bg:'#FEF2F2', color:'#991B1B' },
+    'En attente': { bg:'#F0EDE5', color:'#7A6A58' },
   };
 
   const cardHTML = (item) => {
     const st = STATUT_STYLE[item.statut] || { bg:'#F0EDE5', color:'#7A6A58' };
-    return `<div style="border:1px solid #E8DFD3;border-radius:8px;padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:6px;align-items:start">
-      <div>
-        <div style="font-size:13px;font-weight:500;color:#2A2118">${item.entreprise}</div>
-        <div style="font-size:11px;color:#9C8878;margin-top:2px">${item.metier}${item.contact ? ' · Contact : ' + item.contact : ''}${item.telephone ? ' · ' + item.telephone : ''}</div>
-        <div style="font-size:10px;color:#B5A593;margin-top:3px">${item.date ? 'Envoyée le ' + new Date(item.date + 'T12:00:00').toLocaleDateString('fr-CH') : '—'}</div>
-        ${item.notes ? '<div style="font-size:11px;color:#9C8878;margin-top:4px;font-style:italic">' + item.notes + '</div>' : ''}
-      </div>
-      <span style="font-size:11px;padding:3px 8px;border-radius:12px;background:${st.bg};color:${st.color};white-space:nowrap;font-weight:500">${item.statut}</span>
-    </div>`;
+    const dateStr = item.date
+      ? new Date(item.date + 'T12:00:00').toLocaleDateString('fr-CH', {day:'2-digit',month:'2-digit',year:'numeric'})
+      : '—';
+    return `
+      <div style="border:1px solid #E8DFD3;border-radius:8px;padding:12px 14px;margin-bottom:8px;page-break-inside:avoid">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:500;color:#2A2118">${item.entreprise || '—'}</div>
+            <div style="font-size:12px;color:#9C8878;margin-top:3px">${item.metier || '—'}${item.contact ? ' · ' + item.contact : ''}${item.telephone ? ' · ' + item.telephone : ''}</div>
+            <div style="font-size:11px;color:#B5A593;margin-top:3px">Envoyée le ${dateStr}</div>
+            ${item.notes ? '<div style="font-size:11px;color:#9C8878;margin-top:5px;font-style:italic">' + item.notes + '</div>' : ''}
+          </div>
+          <span style="font-size:11px;padding:3px 9px;border-radius:12px;background:${st.bg};color:${st.color};white-space:nowrap;font-weight:500;flex-shrink:0">${item.statut}</span>
+        </div>
+      </div>`;
+  };
+
+  const groupByType = (list) => {
+    const groups = [];
+    const stages = list.filter(i => i.type === 'Stage');
+    const apprs = list.filter(i => i.type === 'Apprentissage');
+    const autres = list.filter(i => !i.type || (i.type !== 'Stage' && i.type !== 'Apprentissage'));
+    if (stages.length) groups.push({ label: 'Stages', items: stages });
+    if (apprs.length) groups.push({ label: 'Apprentissages', items: apprs });
+    if (autres.length) groups.push({ label: 'Candidatures', items: autres });
+    return groups;
   };
 
   const groups = filtreType ? [{ label: filtreType + 's', items }] : groupByType(items);
 
   const groupsHTML = groups.map(g => `
-    <div style="font-size:10px;font-weight:500;color:#9C8878;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;margin-top:16px">${g.label}</div>
+    <div style="font-size:10px;font-weight:500;color:#9C8878;text-transform:uppercase;letter-spacing:0.06em;margin:20px 0 8px">${g.label}</div>
     ${g.items.map(cardHTML).join('')}
   `).join('');
 
   const filtreLine = filtresActifs.length
-    ? `<div style="font-size:11px;color:#9C8878;margin-top:4px">Filtres : ${filtresActifs.join(' · ')}</div>` : '';
+    ? `<div style="font-size:11px;color:#9C8878;margin-top:6px">Filtres actifs : ${filtresActifs.join(' · ')}</div>` : '';
 
-  const html = `
-    <div style="font-family:'DM Sans',system-ui,sans-serif;color:#2A2118;max-width:640px;margin:0 auto">
-      <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #E8DFD3">
-        <div style="font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:#9C8878;margin-bottom:6px">CAP Formations</div>
-        <div style="font-size:22px;font-weight:500">${nom}</div>
-        <div style="font-size:12px;color:#9C8878;margin-top:4px">Suivi des candidatures · ${conseillerCode ? 'Conseiller ' + conseillerCode + ' · ' : ''}${dateExport}</div>
-        ${filtreLine}
-      </div>
-      ${statsHTML}
-      ${!items.length ? '<div style="text-align:center;color:#B5A593;padding:24px">Aucune candidature avec les filtres sélectionnés.</div>' : groupsHTML}
-      <div style="margin-top:20px;padding-top:12px;border-top:1px solid #E8DFD3;display:flex;justify-content:space-between;font-size:10px;color:#B5A593">
-        <span>${filtresActifs.length ? 'Filtres : ' + filtresActifs.join(', ') : 'Toutes candidatures'}</span>
-        <span>${total} candidature${total > 1 ? 's' : ''}</span>
-      </div>
-    </div>`;
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Candidatures – ${nom}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #2A2118; background: #fff; padding: 32px 36px; max-width: 720px; margin: 0 auto; }
+  @media print {
+    body { padding: 20px 24px; }
+    @page { margin: 1.5cm; }
+  }
+</style>
+</head>
+<body>
+  <div style="text-align:center;margin-bottom:24px;padding-bottom:18px;border-bottom:1.5px solid #3730A3">
+    <div style="font-size:10px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:#9C8878;margin-bottom:6px">CAP Formations</div>
+    <div style="font-size:24px;font-weight:500;color:#2A2118">${nom}</div>
+    <div style="font-size:12px;color:#9C8878;margin-top:5px">Suivi des candidatures${conseillerCode ? ' · Conseiller ' + conseillerCode : ''} · ${dateExport}</div>
+    ${filtreLine}
+  </div>
 
-  const zone = document.getElementById('pdf-print-zone');
-  zone.innerHTML = html;
-  zone.style.display = 'block';
-  window.print();
-  zone.style.display = 'none';
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px">
+    ${[
+      ['Total', total, '#2A2118'],
+      ['Entretiens', nb('Entretien'), '#065F46'],
+      ['En cours', nb('Envoyée') + nb('Relancée') + nb('En attente'), '#3730A3'],
+      ['Refus', nb('Refus'), '#991B1B']
+    ].map(([lbl, val, color]) => `
+      <div style="text-align:center;border:1px solid #E8DFD3;border-radius:8px;padding:12px 6px">
+        <div style="font-size:24px;font-weight:500;color:${color}">${val}</div>
+        <div style="font-size:10px;color:#9C8878;margin-top:3px">${lbl}</div>
+      </div>`).join('')}
+  </div>
+
+  ${!items.length
+    ? '<div style="text-align:center;color:#B5A593;padding:32px">Aucune candidature avec les filtres sélectionnés.</div>'
+    : groupsHTML}
+
+  <div style="margin-top:24px;padding-top:12px;border-top:1px solid #E8DFD3;display:flex;justify-content:space-between;font-size:10px;color:#B5A593">
+    <span>${filtresActifs.length ? 'Filtres : ' + filtresActifs.join(', ') : 'Toutes candidatures'}</span>
+    <span>${total} candidature${total > 1 ? 's' : ''}</span>
+  </div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=800,height=700');
+  if (!win) { toast('Autorisez les popups pour générer le PDF', true); return; }
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
 }
 
 // ── ANIMATION AVION EN PAPIER (écran de connexion) ──
