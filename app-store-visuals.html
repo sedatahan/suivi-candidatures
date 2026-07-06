@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>CAP Formations — Présentation app</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: oklch(97% 0.014 80);
+    --bg-card: oklch(99% 0.005 90);
+    --ink: oklch(24% 0.02 280);
+    --ink-soft: oklch(46% 0.02 280);
+    --accent: oklch(35% 0.13 276);
+    --accent-soft: oklch(35% 0.13 276 / 0.08);
+    --line: oklch(88% 0.01 90);
+    --good: oklch(62% 0.14 155);
+    --warn: oklch(62% 0.16 45);
+    --radius-sm: 8px;
+    --radius: 12px;
+    --radius-lg: 20px;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  body{
+    background: oklch(93% 0.01 85);
+    font-family:'Inter', system-ui, sans-serif;
+    padding: 48px 0;
+  }
+
+  .deck{
+    display:flex;
+    gap:40px;
+    overflow-x:auto;
+    padding: 0 48px 24px;
+  }
+
+  .slide{
+    flex: 0 0 390px;
+    width:390px;
+    background: var(--bg);
+    border-radius: 28px;
+    padding: 56px 32px 40px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    box-shadow: 0 24px 60px -20px oklch(30% 0.05 280 / 0.25);
+  }
+
+  .eyebrow{
+    font-family:'DM Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight: 600;
+    font-size: 26px;
+    line-height: 1.22;
+    color: var(--ink);
+    text-align:center;
+    max-width: 300px;
+    margin-bottom: 36px;
+  }
+
+  .phone{
+    width: 280px;
+    height: 560px;
+    background: oklch(20% 0.02 280);
+    border-radius: 40px;
+    padding: 10px;
+    box-shadow: 0 30px 50px -25px oklch(20% 0.02 280 / 0.55);
+  }
+
+  .screen{
+    width:100%;
+    height:100%;
+    background: var(--bg-card);
+    border-radius: 30px;
+    overflow:hidden;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .notch{
+    position:absolute;
+    top:10px; left:50%;
+    transform:translateX(-50%);
+    width:90px; height:18px;
+    background: oklch(20% 0.02 280);
+    border-radius: 12px;
+    z-index:5;
+  }
+
+  .topbar{
+    padding: 34px 18px 12px;
+    font-weight:600;
+    font-size:14px;
+    color: var(--ink);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .content{
+    flex:1;
+    padding: 14px 14px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  /* ---- Screen 1 : Kanban ---- */
+  .kanban{
+    display:flex;
+    gap:8px;
+    height:100%;
+  }
+  .col{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .col-title{
+    font-size:10px;
+    font-weight:600;
+    color: var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    padding: 2px 4px;
+  }
+  .card{
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 9px 8px;
+  }
+  .card .entreprise{
+    font-size:11px;
+    font-weight:600;
+    color: var(--ink);
+    margin-bottom:3px;
+  }
+  .card .metier{
+    font-size:10px;
+    color: var(--ink-soft);
+  }
+  .dot-envoyee{width:6px;height:6px;border-radius:50%;background:oklch(65% 0.13 240);display:inline-block;margin-right:4px;}
+  .dot-entretien{width:6px;height:6px;border-radius:50%;background:var(--warn);display:inline-block;margin-right:4px;}
+  .dot-reponse{width:6px;height:6px;border-radius:50%;background:var(--good);display:inline-block;margin-right:4px;}
+
+  /* ---- Screen 2 : relance ---- */
+  .relance-card{
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .relance-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    background: oklch(62% 0.16 45 / 0.12);
+    color: oklch(48% 0.16 45);
+    font-size:11px;
+    font-weight:600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+  .relance-title{font-size:14px; font-weight:600; color:var(--ink); margin-bottom:4px;}
+  .relance-sub{font-size:12px; color:var(--ink-soft); margin-bottom:14px;}
+  .relance-btn{
+    background: var(--accent);
+    color: white;
+    font-size:12px;
+    font-weight:500;
+    text-align:center;
+    padding: 10px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ---- Screen 3 : form ---- */
+  .field-label{font-size:11px; font-weight:600; color:var(--ink-soft); margin-bottom:4px; margin-top:10px;}
+  .field{
+    background:white;
+    border:1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size:12px;
+    color: var(--ink);
+  }
+  .field.highlight{border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);}
+  .toggle{display:flex; gap:6px; margin-top:10px;}
+  .toggle-opt{
+    flex:1;
+    text-align:center;
+    padding:9px;
+    font-size:11px;
+    font-weight:600;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+  }
+  .toggle-opt.active{ background: var(--accent); color:white; border-color:var(--accent); }
+  .autocomplete-row{
+    font-size:11px;
+    padding: 6px 4px;
+    color: var(--ink-soft);
+  }
+  .autocomplete-row b{color:var(--accent);}
+  .submit-btn{
+    margin-top:auto;
+    background: var(--accent);
+    color:white;
+    text-align:center;
+    padding:12px;
+    border-radius: var(--radius-sm);
+    font-size:13px;
+    font-weight:600;
+  }
+
+  /* ---- Screen 4 : stats ---- */
+  .stat-row{display:flex; gap:8px;}
+  .stat-box{
+    flex:1;
+    background:white;
+    border:1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 12px 10px;
+  }
+  .stat-num{font-family:'Fraunces', serif; font-size:22px; font-weight:600; color:var(--ink);}
+  .stat-label{font-size:9.5px; color:var(--ink-soft); margin-top:2px;}
+  .chart{
+    background:white;
+    border:1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+  }
+  .chart-title{font-size:11px; font-weight:600; color:var(--ink); margin-bottom:12px;}
+  .bars{display:flex; align-items:flex-end; gap:10px; height:110px;}
+  .bar{flex:1; border-radius: 4px 4px 0 0; background: var(--accent);}
+  .bar-label{font-size:9px; color:var(--ink-soft); text-align:center; margin-top:6px;}
+  .bar-col{display:flex; flex-direction:column; align-items:center; flex:1;}
+</style>
+</head>
+<body>
+
+<div class="deck">
+
+  <!-- SLIDE 1 -->
+  <div class="slide" data-document-role="page" data-label="Suivi des candidatures">
+    <div class="eyebrow">Suivi des candidatures</div>
+    <h1>Toutes vos candidatures, au même endroit</h1>
+    <div class="phone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="topbar">Mes candidatures</div>
+        <div class="content">
+          <div class="kanban">
+            <div class="col">
+              <div class="col-title"><span class="dot-envoyee"></span>Envoyée</div>
+              <div class="card"><div class="entreprise">Garage Muller</div><div class="metier">Mécanicien CFC</div></div>
+              <div class="card"><div class="entreprise">Coop Vernier</div><div class="metier">Employé commerce</div></div>
+            </div>
+            <div class="col">
+              <div class="col-title"><span class="dot-entretien"></span>Entretien</div>
+              <div class="card"><div class="entreprise">Pharmacie Plainpalais</div><div class="metier">Assistante pharmacie</div></div>
+            </div>
+            <div class="col">
+              <div class="col-title"><span class="dot-reponse"></span>Réponse</div>
+              <div class="card"><div class="entreprise">EMS Les Tilleuls</div><div class="metier">ASSC</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2 -->
+  <div class="slide" data-document-role="page" data-label="Rappel de relance">
+    <div class="eyebrow">Rappel de relance</div>
+    <h1>Un signal au bon moment, jamais oublié</h1>
+    <div class="phone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="topbar">Détail candidature</div>
+        <div class="content" style="padding-top:20px;">
+          <div class="relance-card">
+            <div class="relance-badge">● 10 jours sans nouvelles</div>
+            <div class="relance-title">Garage Muller</div>
+            <div class="relance-sub">Mécanicien CFC · envoyée le 24 juin</div>
+            <div class="relance-btn">Marquer comme relancée</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3 -->
+  <div class="slide" data-document-role="page" data-label="Ajout rapide">
+    <div class="eyebrow">Ajout rapide</div>
+    <h1>Un stage repéré, une place d'apprentissage : ajoutés en 10 secondes</h1>
+    <div class="phone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="topbar">Nouvelle candidature</div>
+        <div class="content">
+          <div class="toggle">
+            <div class="toggle-opt active">Apprentissage</div>
+            <div class="toggle-opt">Stage</div>
+          </div>
+          <div class="field-label">Métier</div>
+          <div class="field highlight">Assist...</div>
+          <div class="autocomplete-row"><b>Assist</b>ante socio-éducative</div>
+          <div class="autocomplete-row"><b>Assist</b>ant en pharmacie</div>
+          <div class="autocomplete-row"><b>Assist</b>ante en soins et santé communautaire</div>
+          <div class="field-label">Entreprise</div>
+          <div class="field">Pharmacie Plainpalais</div>
+          <div class="submit-btn">Ajouter la candidature</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4 -->
+  <div class="slide" data-document-role="page" data-label="Statistiques">
+    <div class="eyebrow">Statistiques</div>
+    <h1>Voir sa progression, mesurer ses efforts</h1>
+    <div class="phone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="topbar">Mon avancement</div>
+        <div class="content">
+          <div class="stat-row">
+            <div class="stat-box"><div class="stat-num">12</div><div class="stat-label">candidatures envoyées</div></div>
+            <div class="stat-box"><div class="stat-num">3</div><div class="stat-label">entretiens obtenus</div></div>
+          </div>
+          <div class="chart">
+            <div class="chart-title">Candidatures par mois</div>
+            <div class="bars">
+              <div class="bar-col"><div class="bar" style="height:30%"></div><div class="bar-label">Avr</div></div>
+              <div class="bar-col"><div class="bar" style="height:55%"></div><div class="bar-label">Mai</div></div>
+              <div class="bar-col"><div class="bar" style="height:45%"></div><div class="bar-label">Juin</div></div>
+              <div class="bar-col"><div class="bar" style="height:80%"></div><div class="bar-label">Juil</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
