@@ -274,17 +274,22 @@ body {
 #screen-youth { background: var(--bg); }
 
 /* ── ÉCRAN STATISTIQUES ── */
-#screen-stats { background: var(--bg); overflow-y: auto; }
 .stats-screen-header {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 16px 16px 12px;
+  padding-top: calc(16px + var(--safe-top));
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 10;
+}
+/* L'écran stats démarre bien depuis le haut absolu du viewport */
+#screen-stats {
+  background: var(--bg);
+  overflow-y: auto;
 }
 .stats-back-btn {
   background: var(--surface2);
@@ -1758,7 +1763,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
