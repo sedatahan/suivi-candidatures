@@ -272,6 +272,122 @@ body {
 
 /* ── YOUTH APP ── */
 #screen-youth { background: var(--bg); }
+
+/* ── ÉCRAN STATISTIQUES ── */
+#screen-stats { background: var(--bg); overflow-y: auto; }
+.stats-screen-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.stats-back-btn {
+  background: var(--surface2);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 7px 13px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.stats-screen-title { font-size: 16px; font-weight: 600; color: var(--text); }
+.stats-screen-sub { font-size: 12px; color: var(--text2); margin-top: 1px; }
+.stats-body { padding: 20px 16px 40px; max-width: 540px; margin: 0 auto; }
+.stats-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text2);
+  margin: 24px 0 12px;
+}
+.stats-section-label:first-child { margin-top: 0; }
+
+/* Barres statut */
+.sbar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.sbar-label { font-size: 12px; color: var(--text); width: 82px; flex-shrink: 0; }
+.sbar-track { flex: 1; background: var(--surface2); border-radius: 4px; height: 10px; overflow: hidden; }
+.sbar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease-out; }
+.sbar-val { font-size: 12px; font-weight: 600; color: var(--text); width: 20px; text-align: right; flex-shrink: 0; }
+
+/* Graphique mensuel */
+.month-chart-wrap { display: flex; align-items: flex-end; gap: 5px; height: 90px; padding: 0 2px; }
+.month-col { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+.month-bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent);
+  opacity: 0.55;
+  transition: height 0.4s ease-out;
+  min-height: 2px;
+}
+.month-bar.current { opacity: 1; }
+.month-name { font-size: 9px; color: var(--text2); }
+.month-val { font-size: 9px; font-weight: 600; color: var(--text); min-height: 13px; }
+
+/* Entonnoir */
+.funnel-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.funnel-bar-wrap { flex: 1; background: var(--surface2); border-radius: 4px; height: 30px; overflow: hidden; }
+.funnel-bar-inner {
+  height: 100%;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  transition: width 0.5s ease-out;
+}
+.funnel-pct { font-size: 11px; color: var(--text2); width: 34px; text-align: right; flex-shrink: 0; }
+
+/* Type cards */
+.type-cards { display: flex; gap: 10px; }
+.type-card-s {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 10px;
+  text-align: center;
+}
+.type-card-num { font-size: 26px; font-weight: 600; color: var(--accent); }
+.type-card-lbl { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.type-card-pct { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+/* Top métiers */
+.top-metier-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.top-metier-row:last-child { border-bottom: none; }
+.top-rank { font-size: 12px; color: var(--text3); width: 16px; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+.top-name { font-size: 13px; color: var(--text); flex: 1; }
+.top-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: 'DM Mono', monospace;
+}
+.top-favori-badge {
+  font-size: 10px;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: 4px;
+}
 .youth-body { flex: 1; padding: 20px 16px; padding-bottom: calc(20px + var(--safe-bottom)); max-width: 600px; margin: 0 auto; width: 100%; }
 
 .stats-row {
@@ -286,7 +402,10 @@ body {
   border-radius: var(--radius);
   padding: 12px 8px;
   text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
+.stat-card:hover { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-light); }
 .stat-num { font-size: 22px; font-weight: 600; line-height: 1; }
 .stat-lbl { font-size: 11px; color: var(--text3); margin-top: 3px; }
 
@@ -993,10 +1112,10 @@ tr:last-child td { border-bottom: none; }
   </div>
   <div class="youth-body">
     <div class="stats-row" id="youth-stats">
-      <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-lbl">Total</div></div>
-      <div class="stat-card"><div class="stat-num" id="stat-entretien" style="color:var(--entretien-dot)">—</div><div class="stat-lbl">Entretiens</div></div>
-      <div class="stat-card"><div class="stat-num" id="stat-attente" style="color:var(--envoyee-dot)">—</div><div class="stat-lbl">En cours</div></div>
-      <div class="stat-card"><div class="stat-num" id="stat-refus" style="color:var(--refus-dot)">—</div><div class="stat-lbl">Refus</div></div>
+      <div class="stat-card" onclick="showStats()"><div class="stat-num" id="stat-total">—</div><div class="stat-lbl">Total</div></div>
+      <div class="stat-card" onclick="showStats()" ><div class="stat-num" id="stat-entretien" style="color:var(--entretien-dot)">—</div><div class="stat-lbl">Entretiens</div></div>
+      <div class="stat-card" onclick="showStats()"><div class="stat-num" id="stat-attente" style="color:var(--envoyee-dot)">—</div><div class="stat-lbl">En cours</div></div>
+      <div class="stat-card" onclick="showStats()"><div class="stat-num" id="stat-refus" style="color:var(--refus-dot)">—</div><div class="stat-lbl">Refus</div></div>
     </div>
 
     <div id="favoris-banner" class="favoris-banner" style="display:none">
@@ -1046,6 +1165,18 @@ tr:last-child td { border-bottom: none; }
     </div>
     <div id="youth-list"></div>
   </div>
+</div>
+
+<!-- ══ STATISTIQUES ═══════════════════════════════════════════════════════════ -->
+<div id="screen-stats" class="screen">
+  <div class="stats-screen-header">
+    <button class="stats-back-btn" onclick="closeStats()">← Retour</button>
+    <div>
+      <div class="stats-screen-title">Mes statistiques</div>
+      <div class="stats-screen-sub" id="stats-sub">—</div>
+    </div>
+  </div>
+  <div class="stats-body" id="stats-body"></div>
 </div>
 
 <!-- ══ COUNSELOR ══════════════════════════════════════════════════════════════ -->
@@ -1627,7 +1758,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -2708,6 +2839,153 @@ document.getElementById('f-date').value = todayISO();
 
 // Restore session on page load
 restoreSession();
+
+// ── STATISTIQUES ─────────────────────────────────────────────────────────────
+
+function showStats() {
+  const items = allData[currentUser] || [];
+  document.getElementById('stats-sub').textContent =
+    items.length + ' candidature' + (items.length > 1 ? 's' : '') + ' au total';
+  renderStats(items, youthFavoris);
+  showScreen('stats');
+}
+
+function closeStats() {
+  showScreen('youth');
+}
+
+function renderStats(items, favoris) {
+  const body = document.getElementById('stats-body');
+  if (!items.length) {
+    body.innerHTML = '<div class="empty-state"><div class="empty-title">Aucune donnée à afficher</div><div class="empty-text">Ajoutez des candidatures pour voir vos statistiques.</div></div>';
+    return;
+  }
+
+  // ── Calculs ──────────────────────────────────────────────────────────────
+  const nb = (s) => items.filter(i => i.statut === s).length;
+  const total = items.length;
+  const statuts = [
+    { label: 'Envoyées',   val: nb('Envoyée'),    color: '#4F46E5' },
+    { label: 'Entretiens', val: nb('Entretien'),  color: '#059669' },
+    { label: 'Relancées',  val: nb('Relancée'),   color: '#F59E0B' },
+    { label: 'En attente', val: nb('En attente'), color: '#B5A593' },
+    { label: 'Refus',      val: nb('Refus'),      color: '#EF4444' },
+  ];
+  const maxVal = Math.max(...statuts.map(s => s.val), 1);
+
+  // Activité mensuelle : grouper par mois
+  const now = new Date();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      label: d.toLocaleDateString('fr-CH', { month: 'short' }),
+      year: d.getFullYear(),
+      month: d.getMonth(),
+      count: 0,
+      isCurrent: i === 0,
+    });
+  }
+  items.forEach(item => {
+    if (!item.date_ajout) return;
+    const d = new Date(item.date_ajout);
+    const m = months.find(mo => mo.year === d.getFullYear() && mo.month === d.getMonth());
+    if (m) m.count++;
+  });
+  const maxMonth = Math.max(...months.map(m => m.count), 1);
+  const monthThisYear = months.filter(m => m.year === now.getFullYear() && m.month === now.getMonth());
+  const countThisMonth = monthThisYear.length ? monthThisYear[0].count : 0;
+
+  // Entonnoir
+  const reponses = nb('Entretien') + nb('Refus') + nb('Relancée');
+  const entretiens = nb('Entretien');
+  const funnelData = [
+    { label: total + ' envoyée' + (total > 1 ? 's' : ''), pct: 100, color: '#3730A3' },
+    { label: reponses + ' réponse' + (reponses > 1 ? 's' : ''), pct: total ? Math.round(reponses / total * 100) : 0, color: '#4F46E5' },
+    { label: entretiens + ' entretien' + (entretiens > 1 ? 's' : ''), pct: total ? Math.round(entretiens / total * 100) : 0, color: '#059669' },
+  ];
+
+  // Types
+  const nbStage = items.filter(i => i.type === 'Stage').length;
+  const nbAppr = items.filter(i => i.type === 'Apprentissage').length;
+
+  // Top métiers : favoris d'abord (avec ★), puis les autres par fréquence
+  const metierCount = {};
+  items.forEach(i => {
+    if (i.metier) metierCount[i.metier] = (metierCount[i.metier] || 0) + 1;
+  });
+
+  // Favoris définis (même si 0 candidature sur ce métier)
+  const favoriRows = (favoris || []).map(m => ({
+    name: m,
+    count: metierCount[m] || 0,
+    isFavori: true,
+  }));
+
+  // Autres métiers candidatés hors favoris, triés par fréquence
+  const otherMetiers = Object.entries(metierCount)
+    .filter(([m]) => !(favoris || []).includes(m))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([name, count]) => ({ name, count, isFavori: false }));
+
+  const topMetiers = [...favoriRows, ...otherMetiers];
+
+  // ── Rendu HTML ────────────────────────────────────────────────────────────
+  body.innerHTML = `
+    <div class="stats-section-label">Répartition par statut</div>
+    ${statuts.map(s => `
+      <div class="sbar-row">
+        <div class="sbar-label">${s.label}</div>
+        <div class="sbar-track"><div class="sbar-fill" style="width:${Math.round(s.val/maxVal*100)}%;background:${s.color}"></div></div>
+        <div class="sbar-val">${s.val}</div>
+      </div>`).join('')}
+
+    <div class="stats-section-label">Activité mensuelle${countThisMonth ? ' · <span style="color:var(--accent);font-weight:600">' + countThisMonth + ' ce mois</span>' : ''}</div>
+    <div class="month-chart-wrap">
+      ${months.map(m => `
+        <div class="month-col">
+          <div class="month-val">${m.count || ''}</div>
+          <div class="month-bar${m.isCurrent ? ' current' : ''}" style="height:${Math.round(m.count/maxMonth*72)+4}px"></div>
+          <div class="month-name">${m.label}</div>
+        </div>`).join('')}
+    </div>
+    ${countThisMonth ? `<div style="font-size:11px;color:var(--text3);margin-top:6px;text-align:right">Barre pleine = mois en cours</div>` : ''}
+
+    <div class="stats-section-label">Entonnoir de conversion</div>
+    ${funnelData.map(f => `
+      <div class="funnel-row">
+        <div class="funnel-bar-wrap">
+          <div class="funnel-bar-inner" style="width:${f.pct}%;background:${f.color}">${f.pct > 20 ? f.label : ''}</div>
+        </div>
+        <div class="funnel-pct">${f.pct}%</div>
+      </div>`).join('')}
+
+    ${(nbStage + nbAppr > 0) ? `
+    <div class="stats-section-label">Stage vs Apprentissage</div>
+    <div class="type-cards">
+      <div class="type-card-s">
+        <div class="type-card-num">${nbStage}</div>
+        <div class="type-card-lbl">Stages</div>
+        ${nbStage + nbAppr > 0 ? `<div class="type-card-pct">${Math.round(nbStage/(nbStage+nbAppr)*100)}%</div>` : ''}
+      </div>
+      <div class="type-card-s">
+        <div class="type-card-num">${nbAppr}</div>
+        <div class="type-card-lbl">Apprentissages</div>
+        ${nbStage + nbAppr > 0 ? `<div class="type-card-pct">${Math.round(nbAppr/(nbStage+nbAppr)*100)}%</div>` : ''}
+      </div>
+    </div>` : ''}
+
+    <div class="stats-section-label">Métiers candidatés</div>
+    ${topMetiers.length ? topMetiers.map((m, i) => `
+      <div class="top-metier-row">
+        <div class="top-rank">${m.isFavori ? '★' : (i - (favoris||[]).length + 1)}</div>
+        <div class="top-name">${m.name}${m.isFavori ? '<span class="top-favori-badge">favori</span>' : ''}</div>
+        <div class="top-count">${m.count > 0 ? m.count + '×' : '—'}</div>
+      </div>`).join('')
+    : '<div style="font-size:13px;color:var(--text3);padding:8px 0">Aucun métier candidaté pour l\'instant.</div>'}
+  `;
+}
 
 // ── SWIPE POUR FERMER LES MODALS (mobile) ──
 (function(){
