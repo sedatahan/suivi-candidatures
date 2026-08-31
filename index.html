@@ -1798,7 +1798,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -2690,11 +2690,14 @@ function formatDate(iso) {
 function parseSheetDate(val) {
   if (!val) return '';
   const s = String(val).trim();
+  // Déjà au format YYYY-MM-DD : retourner tel quel, pas besoin de parser
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Format ISO avec heure/timezone (ex: depuis Google Sheets) : extraire YYYY-MM-DD
   const iso = s.match(/^(\d{4}-\d{2}-\d{2})/);
   if (iso) return iso[1];
   try {
-    const d = new Date(s);
+    // Forcer T12:00:00 pour éviter le décalage UTC→local
+    const d = new Date(s.length === 10 ? s + 'T12:00:00' : s);
     if (!isNaN(d)) {
       return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     }
@@ -2705,10 +2708,11 @@ function parseSheetDate(val) {
 function daysSince(iso) {
   if (!iso) return null;
   try {
+    // Forcer T12:00:00 pour que new Date() utilise l'heure locale et non UTC
     const clean = String(iso).trim().slice(0,10);
-    const then = new Date(clean);
+    const then = new Date(clean + 'T12:00:00');
     const now = new Date();
-    now.setHours(0,0,0,0);
+    now.setHours(12,0,0,0);
     return Math.floor((now - then) / 86400000);
   } catch(e) { return null; }
 }
@@ -2727,14 +2731,14 @@ function needsFollowUp(item) {
 function needsRappel(item) {
   if (item.statut !== 'Reportée') return false;
   if (!item.date_rappel) return false;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const rappel = new Date(item.date_rappel + 'T00:00:00');
+  const today = new Date(); today.setHours(12,0,0,0);
+  const rappel = new Date(item.date_rappel + 'T12:00:00');
   return rappel <= today;
 }
 
 function rappelLabel(item) {
   if (!item.date_rappel) return '';
-  const d = new Date(item.date_rappel + 'T00:00:00');
+  const d = new Date(item.date_rappel + 'T12:00:00');
   return 'À rappeler depuis le ' + d.toLocaleDateString('fr-CH', {day:'2-digit',month:'2-digit',year:'numeric'});
 }
 
