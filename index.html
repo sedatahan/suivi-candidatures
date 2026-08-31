@@ -34,6 +34,7 @@
   --entretien-bg: #ECFDF5; --entretien-text: #065F46; --entretien-dot: #22C55E;
   --refus-bg: #FEF2F2; --refus-text: #991B1B; --refus-dot: #EF4444;
   --attente-bg: #F0EDE5; --attente-text: #7A6A58; --attente-dot: #B5A593;
+  --reportee-bg: #F3E8FF; --reportee-text: #6B21A8; --reportee-dot: #A855F7;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -471,6 +472,7 @@ body {
 .badge-Entretien  { background: var(--entretien-bg);color: var(--entretien-text);} .badge-Entretien::before  { background: var(--entretien-dot);}
 .badge-Refus      { background: var(--refus-bg);    color: var(--refus-text);    } .badge-Refus::before      { background: var(--refus-dot);    }
 .badge-En\ attente{ background: var(--attente-bg);  color: var(--attente-text);  } .badge-En\ attente::before{ background: var(--attente-dot);  }
+.badge-Reportée   { background: var(--reportee-bg); color: var(--reportee-text); } .badge-Reportée::before   { background: var(--reportee-dot); }
 
 .empty-state {
   text-align: center;
@@ -711,6 +713,29 @@ body {
   border-color: #F59E0B;
   box-shadow: 0 0 0 2px rgba(245,158,11,0.15);
 }
+.cand-card.rappel-due {
+  border-color: var(--reportee-dot);
+  box-shadow: 0 0 0 2px rgba(168,85,247,0.15);
+}
+.rappel-banner {
+  background: var(--reportee-bg);
+  border: 1.5px solid var(--reportee-dot);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--reportee-text);
+  font-weight: 500;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Champ date rappel conditionnel dans le formulaire */
+#rappel-field {
+  display: none;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
 .empty-title { font-weight: 600; font-size: 16px; margin-bottom: 6px; color: var(--text); }
 .empty-text { font-size: 14px; color: var(--text2); }
 
@@ -1161,6 +1186,7 @@ tr:last-child td { border-bottom: none; }
         <option value="Entretien">Entretiens</option>
         <option value="Refus">Refus</option>
         <option value="En attente">En attente</option>
+        <option value="Reportée">Reportées</option>
       </select>
     </div>
     <div class="filter-bar" id="youth-type-filter-bar" style="margin-bottom:14px">
@@ -1209,6 +1235,7 @@ tr:last-child td { border-bottom: none; }
         <button class="filter-btn" onclick="filterCounselor('Relancée', this)">Relancées</button>
         <button class="filter-btn" onclick="filterCounselor('Refus', this)">Refus</button>
         <button class="filter-btn" onclick="filterCounselor('En attente', this)">En attente</button>
+        <button class="filter-btn" onclick="filterCounselor('Reportée', this)">Reportées</button>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn-add" onclick="openNewJeune()" style="padding:6px 14px;font-size:13px">+ Nouveau jeune</button>
@@ -1265,6 +1292,7 @@ tr:last-child td { border-bottom: none; }
           <option value="Entretien">Entretiens</option>
           <option value="Refus">Refus</option>
           <option value="En attente">En attente</option>
+          <option value="Reportée">Reportées</option>
         </select>
       </div>
       <div class="filter-bar" id="detail-type-filter-bar" style="margin-bottom:14px">
@@ -1319,13 +1347,19 @@ tr:last-child td { border-bottom: none; }
       </div>
       <div class="field">
         <label>Statut</label>
-        <select id="f-statut">
+        <select id="f-statut" onchange="onStatutChange(this.value)">
           <option>Envoyée</option>
           <option>Relancée</option>
           <option>Entretien</option>
           <option>Refus</option>
           <option>En attente</option>
+          <option>Reportée</option>
         </select>
+      </div>
+      <div class="field" id="rappel-field">
+        <label>Me rappeler à partir du <span style="font-size:11px;color:var(--text3);font-weight:400">(optionnel)</span></label>
+        <input type="date" id="f-date-rappel">
+        <div style="font-size:11px;color:var(--reportee-text);margin-top:4px">Une alerte apparaîtra une fois cette date dépassée.</div>
       </div>
       <div class="field">
         <label>Nom du contact</label>
@@ -1764,7 +1798,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -1856,6 +1890,7 @@ async function gsRead() {
       notes: r.notes || '',
       nom_jeune: r.nom_jeune || '',
       date_ajout: r.date_ajout || '',
+      date_rappel: parseSheetDate(r.date_rappel) || '',
     });
   });
   return data;
@@ -1893,6 +1928,7 @@ async function gsAppend(item) {
     id: item.id,
     conseiller: currentConseiller ? currentConseiller.code : youthConseiller,
     date_ajout: item.date_ajout || new Date().toISOString(),
+    date_rappel: item.date_rappel || '',
   };
   const url = gsUrl('write', '&row=' + encodeURIComponent(JSON.stringify(row)));
   await fetch(url);
@@ -1912,6 +1948,7 @@ async function gsUpdate(item) {
     email: item.email,
     notes: item.notes,
     id: item.id,
+    date_rappel: item.date_rappel || '',
   };
   const url = gsUrl('update', '&row=' + encodeURIComponent(JSON.stringify(row)));
   await fetch(url);
@@ -2052,12 +2089,11 @@ function renderYouth() {
     return;
   }
 
-  // Tri : la catégorie sélectionnée remonte en haut, les autres restent visibles
+  // Tri : rappels échus > followup > date récente
   let sorted = [...items].sort((a,b) => {
-    // D'abord les candidatures à relancer
-    const af = needsFollowUp(a) ? 1 : 0;
-    const bf = needsFollowUp(b) ? 1 : 0;
-    if (bf !== af) return bf - af;
+    const ar = needsRappel(a) ? 2 : needsFollowUp(a) ? 1 : 0;
+    const br = needsRappel(b) ? 2 : needsFollowUp(b) ? 1 : 0;
+    if (br !== ar) return br - ar;
     return new Date(b.date||0) - new Date(a.date||0);
   });
 
@@ -2099,8 +2135,10 @@ function renderYouth() {
 function renderList(list, items) {
   list.innerHTML = '<div class="card-list">' + items.map(item => {
     const followup = needsFollowUp(item);
+    const rappel = needsRappel(item);
     const days = daysSince(item.date);
-    return '<div class="cand-card' + (followup ? ' followup' : '') + '" onclick="openModal(\'' + item.id + '\')">'
+    const cardClass = rappel ? ' rappel-due' : followup ? ' followup' : '';
+    return '<div class="cand-card' + cardClass + '" onclick="openModal(\'' + item.id + '\')">'
       + '<div class="cand-top"><div>'
       + '<div class="cand-enterprise">' + item.entreprise + '</div>'
       + '<div class="cand-metier">' + item.metier + (item.type ? ' · ' + item.type : '') + '</div>'
@@ -2109,7 +2147,8 @@ function renderList(list, items) {
       + '<span class="cand-date">' + (item.date ? formatDate(item.date) : 'Date non renseignée') + '</span>'
       + (item.contact ? '<span style="font-size:12px;color:var(--text3)">· ' + item.contact + '</span>' : '')
       + '</div>'
-      + (followup ? '<div class="followup-banner">⏰ Envoyée il y a ' + days + ' jours — pensez à relancer !</div>' : '')
+      + (rappel ? '<div class="rappel-banner">🔔 ' + rappelLabel(item) + '</div>' : '')
+      + (followup && !rappel ? '<div class="followup-banner">⏰ Envoyée il y a ' + days + ' jours — pensez à relancer !</div>' : '')
       + (item.notes ? '<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">' + item.notes + '</div>' : '')
       + '</div>';
   }).join('') + '</div>';
@@ -2118,24 +2157,28 @@ function renderList(list, items) {
 function renderBloc(list, items) {
   list.innerHTML = '<div class="bloc-grid">' + items.map(item => {
     const followup = needsFollowUp(item);
-    return '<div class="bloc-card' + (followup ? ' followup' : '') + '" onclick="openModal(\'' + item.id + '\')">'
+    const rappel = needsRappel(item);
+    const cardClass = rappel ? ' rappel-due' : followup ? ' followup' : '';
+    return '<div class="bloc-card' + cardClass + '" onclick="openModal(\'' + item.id + '\')">'
       + '<span class="badge badge-' + item.statut + '" style="align-self:flex-start">' + item.statut + '</span>'
       + '<div class="bloc-enterprise">' + item.entreprise + '</div>'
       + '<div class="bloc-metier">' + item.metier + (item.type ? ' · ' + item.type : '') + '</div>'
-      + (followup ? '<div style="font-size:11px;color:#92590A;background:#FEF3C7;padding:2px 6px;border-radius:8px;margin-top:2px">⏰ À relancer</div>' : '')
+      + (rappel ? '<div style="font-size:11px;color:var(--reportee-text);background:var(--reportee-bg);padding:2px 6px;border-radius:8px;margin-top:2px">🔔 Rappel</div>' : '')
+      + (followup && !rappel ? '<div style="font-size:11px;color:#92590A;background:#FEF3C7;padding:2px 6px;border-radius:8px;margin-top:2px">⏰ À relancer</div>' : '')
       + '<div class="bloc-date">' + (item.date ? formatDate(item.date) : '—') + '</div>'
       + '</div>';
   }).join('') + '</div>';
 }
 
 function renderKanban(list, items) {
-  const statuts = ['Envoyée', 'Relancée', 'Entretien', 'Refus', 'En attente'];
+  const statuts = ['Envoyée', 'Relancée', 'Entretien', 'Refus', 'En attente', 'Reportée'];
   const colors = {
     'Envoyée':    {bg:'var(--envoyee-bg)',  text:'var(--envoyee-text)',  dot:'var(--envoyee-dot)'},
     'Relancée':   {bg:'var(--relancee-bg)', text:'var(--relancee-text)', dot:'var(--relancee-dot)'},
     'Entretien':  {bg:'var(--entretien-bg)',text:'var(--entretien-text)',dot:'var(--entretien-dot)'},
     'Refus':      {bg:'var(--refus-bg)',    text:'var(--refus-text)',    dot:'var(--refus-dot)'},
     'En attente': {bg:'var(--attente-bg)',  text:'var(--attente-text)',  dot:'var(--attente-dot)'},
+    'Reportée':   {bg:'var(--reportee-bg)', text:'var(--reportee-text)', dot:'var(--reportee-dot)'},
   };
   const cols = statuts.map(statut => {
     const c = colors[statut];
@@ -2143,11 +2186,14 @@ function renderKanban(list, items) {
     const cardsHTML = cards.length
       ? cards.map(item => {
           const followup = needsFollowUp(item);
+          const rappel = needsRappel(item);
           const days = daysSince(item.date);
-          return '<div class="kanban-card' + (followup ? ' followup' : '') + '" onclick="openModal(\'' + item.id + '\')">'
+          const cardClass = rappel ? ' rappel-due' : followup ? ' followup' : '';
+          return '<div class="kanban-card' + cardClass + '" onclick="openModal(\'' + item.id + '\')">'
             + '<div class="kanban-card-title">' + item.entreprise + '</div>'
             + '<div class="kanban-card-sub">' + item.metier + (item.type ? ' · ' + item.type : '') + '</div>'
-            + (followup ? '<div style="font-size:11px;color:#92590A;margin-top:4px">⏰ ' + days + 'j sans réponse</div>' : '')
+            + (rappel ? '<div style="font-size:11px;color:var(--reportee-text);margin-top:4px">🔔 ' + rappelLabel(item) + '</div>' : '')
+            + (followup && !rappel ? '<div style="font-size:11px;color:#92590A;margin-top:4px">⏰ ' + days + 'j sans réponse</div>' : '')
             + '<div class="kanban-card-date">' + (item.date ? formatDate(item.date) : '—') + '</div>'
             + '</div>';
         }).join('')
@@ -2174,6 +2220,8 @@ function openModal(id) {
   document.getElementById('f-metier').value = item?.metier || '';
   document.getElementById('f-date').value = item?.date || todayISO();
   document.getElementById('f-statut').value = item?.statut || 'Envoyée';
+  document.getElementById('f-date-rappel').value = item?.date_rappel || '';
+  onStatutChange(item?.statut || 'Envoyée');
   document.getElementById('f-contact').value = item?.contact || '';
   document.getElementById('f-tel').value = item?.telephone || '';
   document.getElementById('f-email').value = item?.email || '';
@@ -2212,6 +2260,9 @@ async function saveCandidature() {
     metier: metier,
     date: document.getElementById('f-date').value,
     statut: document.getElementById('f-statut').value,
+    date_rappel: document.getElementById('f-statut').value === 'Reportée'
+      ? (document.getElementById('f-date-rappel').value || '')
+      : '',
     contact: document.getElementById('f-contact').value.trim(),
     telephone: document.getElementById('f-tel').value.trim(),
     email: document.getElementById('f-email').value.trim(),
@@ -2315,7 +2366,7 @@ function renderCounselor() {
     const nomJeune = jeunesMap[code] || '';
     const displayName = nomJeune ? nomJeune : code;
     const displaySub = nomJeune ? `(${code}) — ${items.length} candidature${items.length>1?'s':''}` : `${items.length} candidature${items.length>1?'s':''}`;
-    const alertCount = items.filter(i => needsFollowUp(i)).length;
+    const alertCount = items.filter(i => needsFollowUp(i) || needsRappel(i)).length;
     const newCount = hasNewCandidaturesSheet(code) ? countNewSheet(code) : 0;
     return `<div class="youth-card${alertCount ? ' followup' : ''}" onclick="showDetail('${code}')">
       <div class="youth-name" style="display:flex;align-items:center;justify-content:space-between">
@@ -2371,7 +2422,12 @@ function showDetail(code) {
 
 function renderDetailTable(code) {
   const items = allData[code] || [];
-  let sorted = [...items].sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
+  let sorted = [...items].sort((a,b) => {
+    const ar = needsRappel(a) ? 2 : needsFollowUp(a) ? 1 : 0;
+    const br = needsRappel(b) ? 2 : needsFollowUp(b) ? 1 : 0;
+    if (br !== ar) return br - ar;
+    return new Date(b.date||0) - new Date(a.date||0);
+  });
   if (detailFilter !== 'all') sorted = sorted.filter(i => i.statut === detailFilter);
   if (detailTypeFilter !== 'all') sorted = sorted.filter(i => i.type === detailTypeFilter);
   const tbody = document.getElementById('detail-tbody');
@@ -2379,15 +2435,21 @@ function renderDetailTable(code) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">Aucune candidature dans cette catégorie</td></tr>`;
     return;
   }
-  // Utiliser la date de lecture AVANT ouverture (pas après)
   const lastSeen = currentDetailLastSeen ? new Date(currentDetailLastSeen).getTime() : 0;
   tbody.innerHTML = sorted.map(item => {
     const followup = needsFollowUp(item);
+    const rappel = needsRappel(item);
     const days = daysSince(item.date);
     const isNew = lastSeen > 0 && item.date_ajout && new Date(item.date_ajout).getTime() > lastSeen;
-    const rowBg = followup ? 'background:#FFFBEB' : isNew ? 'background:#EFF6FF' : '';
+    const rowBg = rappel ? 'background:var(--reportee-bg)' : followup ? 'background:#FFFBEB' : isNew ? 'background:#EFF6FF' : '';
     const newBadge = isNew ? '<span style="font-size:10px;color:#1A56A4;background:#DBEAFE;padding:1px 7px;border-radius:10px;margin-left:6px;font-weight:700">Nouveau</span>' : '';
-    const alertBadge = followup ? '<span style="font-size:11px;color:#92590A;background:#FEF3C7;padding:1px 6px;border-radius:10px;margin-left:4px">⏰ ' + days + 'j</span>' : '';
+    const alertBadge = rappel
+      ? '<span style="font-size:11px;color:var(--reportee-text);background:var(--reportee-bg);padding:1px 6px;border-radius:10px;margin-left:4px">🔔 Rappel</span>'
+      : followup ? '<span style="font-size:11px;color:#92590A;background:#FEF3C7;padding:1px 6px;border-radius:10px;margin-left:4px">⏰ ' + days + 'j</span>' : '';
+    const notesCell = [
+      item.notes || '',
+      rappel && item.date_rappel ? '<span style="font-size:11px;color:var(--reportee-text)">🔔 ' + rappelLabel(item) + '</span>' : '',
+    ].filter(Boolean).join('<br>');
     return '<tr style="' + rowBg + '">'
       + '<td style="font-size:12px;color:var(--text2);white-space:nowrap">' + (item.type || '—') + '</td>'
       + '<td><strong>' + item.entreprise + '</strong>' + newBadge + alertBadge + '</td>'
@@ -2395,7 +2457,7 @@ function renderDetailTable(code) {
       + '<td style="font-family:monospace;font-size:12px;white-space:nowrap">' + (item.date ? formatDate(item.date) : '—') + '</td>'
       + '<td><span class="badge badge-' + item.statut + '">' + item.statut + '</span></td>'
       + '<td>' + (item.contact||'—') + (item.telephone ? '<br><span style="font-size:11px;color:var(--text3)">' + item.telephone + '</span>' : '') + '</td>'
-      + '<td style="max-width:160px;font-size:12px;color:var(--text2)">' + (item.notes||'—') + '</td>'
+      + '<td style="max-width:160px;font-size:12px;color:var(--text2)">' + (notesCell || '—') + '</td>'
       + '</tr>';
   }).join('');
 }
@@ -2651,10 +2713,29 @@ function daysSince(iso) {
   } catch(e) { return null; }
 }
 
+function onStatutChange(val) {
+  const field = document.getElementById('rappel-field');
+  if (field) field.style.display = val === 'Reportée' ? 'block' : 'none';
+}
+
 function needsFollowUp(item) {
   if (!['Envoyée','Relancée'].includes(item.statut)) return false;
   const days = daysSince(item.date);
   return days !== null && days >= 10;
+}
+
+function needsRappel(item) {
+  if (item.statut !== 'Reportée') return false;
+  if (!item.date_rappel) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const rappel = new Date(item.date_rappel + 'T00:00:00');
+  return rappel <= today;
+}
+
+function rappelLabel(item) {
+  if (!item.date_rappel) return '';
+  const d = new Date(item.date_rappel + 'T00:00:00');
+  return 'À rappeler depuis le ' + d.toLocaleDateString('fr-CH', {day:'2-digit',month:'2-digit',year:'numeric'});
 }
 
 function toast(msg, err) {
