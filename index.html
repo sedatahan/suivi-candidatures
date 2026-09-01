@@ -884,6 +884,22 @@ body {
   transition: box-shadow 0.2s;
 }
 .youth-card:hover { box-shadow: var(--shadow); }
+.youth-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-light);
+  background: var(--accent-light);
+}
+
+/* Vue liste jeunes conseiller */
+.youth-list-view .youth-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+}
+.youth-list-view .youth-card .youth-stats { margin-top: 0; flex: 1; justify-content: flex-end; }
+.youth-list-view .youth-card .youth-name { font-size: 14px; }
+.youth-list-view .youth-card .youth-code { font-size: 11px; white-space: nowrap; }
 .youth-name { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
 .youth-code { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); margin-bottom: 12px; }
 .youth-stats { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -1237,7 +1253,13 @@ tr:last-child td { border-bottom: none; }
         <button class="filter-btn" onclick="filterCounselor('En attente', this)">En attente</button>
         <button class="filter-btn" onclick="filterCounselor('Reportée', this)">Reportées</button>
       </div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;background:var(--surface2);border-radius:var(--radius);padding:3px;gap:2px">
+          <button id="cv-btn-grid" onclick="setCounselorView('grid')" title="Vue grille"
+            style="padding:4px 8px;border:none;border-radius:6px;cursor:pointer;font-size:13px;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,0.1);font-family:'DM Sans',sans-serif">⊞</button>
+          <button id="cv-btn-list" onclick="setCounselorView('list')" title="Vue liste"
+            style="padding:4px 8px;border:none;border-radius:6px;cursor:pointer;font-size:13px;background:transparent;font-family:'DM Sans',sans-serif;color:var(--text2)">☰</button>
+        </div>
         <button class="btn-add" onclick="openNewJeune()" style="padding:6px 14px;font-size:13px">+ Nouveau jeune</button>
         <button class="btn-secondary" onclick="toggleArchives()" id="btn-show-archives" style="white-space:nowrap;padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);font-size:12px">📦 Archives</button>
       </div>
@@ -1798,7 +1820,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxvKFmmO2O57JFT
 // dans les "Script Properties" du projet Apps Script, propriété API_TOKEN).
 // Ce jeton reste visible dans le code source : il sert à filtrer l'accès trivial
 // (scan d'URL, indexation, requêtes accidentelles), pas à garantir une sécurité absolue.
-const API_TOKEN = 'jdPA7_5BfpHj-1owdpfx0lZp_JNwd8eo';
+const API_TOKEN = 'REMPLACER_PAR_VOTRE_JETON';
 
 // Construit une URL d'appel vers l'Apps Script en y ajoutant systématiquement le jeton.
 function gsUrl(action, params) {
@@ -1812,6 +1834,7 @@ let currentRole = null;
 let allData = {};
 let editingId = null;
 let counselorFilter = 'all';
+let counselorView = 'grid'; // 'grid' | 'list'
 let youthFilter = 'all';
 let youthTypeFilter = 'all';
 let currentView = 'list'; // 'list' | 'bloc' | 'kanban'
@@ -2355,7 +2378,17 @@ function renderCounselor() {
     return;
   }
 
-  grid.innerHTML = filtered.map(code => {
+  // Tri alphabétique par nom
+  const sorted = filtered.sort((a, b) => {
+    const na = (jeunesMap[a] || a).toLowerCase();
+    const nb = (jeunesMap[b] || b).toLowerCase();
+    return na.localeCompare(nb, 'fr');
+  });
+
+  const isListView = counselorView === 'list';
+  grid.className = isListView ? 'youth-list-view' : 'youth-grid';
+
+  grid.innerHTML = sorted.map(code => {
     const items = allData[code] || [];
     const counts = {
       'Entretien': items.filter(i=>i.statut==='Entretien').length,
@@ -2368,7 +2401,8 @@ function renderCounselor() {
     const displaySub = nomJeune ? `(${code}) — ${items.length} candidature${items.length>1?'s':''}` : `${items.length} candidature${items.length>1?'s':''}`;
     const alertCount = items.filter(i => needsFollowUp(i) || needsRappel(i)).length;
     const newCount = hasNewCandidaturesSheet(code) ? countNewSheet(code) : 0;
-    return `<div class="youth-card${alertCount ? ' followup' : ''}" onclick="showDetail('${code}')">
+    const isActive = code === currentDetailCode;
+    return `<div class="youth-card${alertCount ? ' followup' : ''}${isActive ? ' active' : ''}" onclick="showDetail('${code}')">
       <div class="youth-name" style="display:flex;align-items:center;justify-content:space-between">
         <span>${displayName}${newCount ? `<span class="notif-dot">${newCount}</span>` : ''}</span>
         ${alertCount ? `<span style="font-size:11px;background:#FEF3C7;color:#92590A;padding:2px 8px;border-radius:10px;font-weight:600">⏰ ${alertCount} à relancer</span>` : ''}
@@ -2383,6 +2417,21 @@ function renderCounselor() {
       </div>
     </div>`;
   }).join('');
+}
+
+function setCounselorView(view) {
+  counselorView = view;
+  const btnGrid = document.getElementById('cv-btn-grid');
+  const btnList = document.getElementById('cv-btn-list');
+  if (btnGrid && btnList) {
+    btnGrid.style.background = view === 'grid' ? 'var(--surface)' : 'transparent';
+    btnGrid.style.boxShadow = view === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none';
+    btnGrid.style.color = view === 'grid' ? 'var(--text)' : 'var(--text2)';
+    btnList.style.background = view === 'list' ? 'var(--surface)' : 'transparent';
+    btnList.style.boxShadow = view === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none';
+    btnList.style.color = view === 'list' ? 'var(--text)' : 'var(--text2)';
+  }
+  renderCounselor();
 }
 
 function filterCounselor(filter, btn) {
@@ -2418,6 +2467,10 @@ function showDetail(code) {
     }).catch(() => {});
   renderDetailTable(code);
   document.getElementById('detail-panel').classList.add('open');
+  // Scroll vers le haut pour voir le panneau
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Mettre à jour la surbrillance des cartes
+  renderCounselor();
 }
 
 function renderDetailTable(code) {
