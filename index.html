@@ -1270,7 +1270,7 @@ tr:last-child td { border-bottom: none; }
 <!-- ══ YOUTH ══════════════════════════════════════════════════════════════════ -->
 <div id="screen-youth" class="screen">
   <div class="app-header">
-    <div class="header-brand">Candidatures</div>
+    <div class="header-brand" id="youth-brand" ondblclick="return false">Candidatures</div>
     <div class="header-user">
       <span class="header-badge" id="youth-header-code"></span>
       <div id="youth-favoris-header" style="display:flex;gap:4px;align-items:center;margin-right:6px">
@@ -2213,11 +2213,42 @@ async function loginCounselor() {
 
 function logout() {
   currentUser = null; currentRole = null; currentConseiller = null; youthConseiller = ''; allData = {}; youthFilter = 'all'; youthFavoris = []; favorisBannerDismissed = false;
+  alertesData = []; alertesPostulees = new Set();
   clearSession();
   showScreen('login');
   document.getElementById('youth-code').value = '';
   document.getElementById('counselor-pwd').value = '';
+  // Nettoyer le paramètre URL sans recharger
+  if (window.history && window.location.search) {
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 }
+
+// ── DÉCONNEXION SECRÈTE ───────────────────────────────────────────────────────
+
+// Option A : triple-clic sur le logo
+(function() {
+  let clickCount = 0;
+  let clickTimer = null;
+  document.addEventListener('click', function(e) {
+    const brand = document.getElementById('youth-brand');
+    if (!brand || !brand.contains(e.target)) return;
+    clickCount++;
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(() => {
+      if (clickCount >= 3) logout();
+      clickCount = 0;
+    }, 400);
+  });
+})();
+
+// Option C : paramètre URL ?logout=1
+(function() {
+  if (window.location.search.includes('logout=1')) {
+    clearSession && clearSession();
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+})();
 
 function showError(msg) {
   const el = document.getElementById('login-error');
