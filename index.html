@@ -1973,6 +1973,7 @@ let currentUser = null;
 let currentRole = null;
 let allData = {};
 let editingId = null;
+let pendingAlertId = null; // ID alerte en attente de confirmation via saveCandidature
 let counselorFilter = 'all';
 let counselorView = 'grid'; // 'grid' | 'list'
 let youthFilter = 'all';
@@ -2432,6 +2433,7 @@ function openModal(id) {
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   editingId = null;
+  pendingAlertId = null; // annulation — l'alerte reste active
 }
 
 async function saveCandidature() {
@@ -2482,6 +2484,15 @@ async function saveCandidature() {
     closeModal();
     renderYouth();
     toast(editingId ? 'Candidature mise à jour ✓' : 'Candidature ajoutée ✓');
+    // Marquer l'alerte comme postulée si vient d'une annonce
+    if (pendingAlertId && !editingId) {
+      alertesPostulees.add(pendingAlertId);
+      fetch(gsUrl('save_alerte_postulee',
+        '&code=' + encodeURIComponent(currentUser) +
+        '&id_alerte=' + encodeURIComponent(pendingAlertId)
+      )).catch(() => {});
+      pendingAlertId = null;
+    }
   } catch(e) {
     toast('Erreur lors de la sauvegarde', true);
   }
@@ -3449,17 +3460,9 @@ function nettoyerMetierOrientation(metier) {
 }
 
 function postulerDepuisAlerte(metier, entreprise, lieu, idAlerte) {
-  // Marquer comme postulée localement et dans le Sheet
-  if (idAlerte) {
-    alertesPostulees.add(idAlerte);
-    fetch(gsUrl('save_alerte_postulee',
-      '&code=' + encodeURIComponent(currentUser) +
-      '&id_alerte=' + encodeURIComponent(idAlerte)
-    )).catch(() => {});
-    // Mettre à jour la pastille
-    renderAlertesView();
-  }
-  // Préremplir le formulaire de nouvelle candidature et fermer les alertes
+  // Mémoriser l'ID alerte — sauvegardé seulement si la candidature est enregistrée
+  pendingAlertId = idAlerte || null;
+  // Préremplir le formulaire et fermer les alertes
   const metierNettoye = nettoyerMetierOrientation(metier);
   closeAlertes();
   openModal(null);
