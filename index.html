@@ -1679,6 +1679,7 @@ async function restoreSession() {
         const resFav = await fetch(gsUrl('check_code', '&code=' + encodeURIComponent(user)));
         const jsonFav = await resFav.json();
         youthFavoris = jsonFav.favoris ? jsonFav.favoris.split('|').filter(Boolean) : [];
+        youthConseiller = jsonFav.conseiller || '';
       } catch(e) { youthFavoris = []; }
       allData = await gsRead();
       if (!allData[user]) allData[user] = [];
