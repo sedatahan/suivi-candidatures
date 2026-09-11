@@ -3250,16 +3250,28 @@ async function genererPointsLettre(metier, entreprise) {
 
 function afficherBulleLettreDirect(points, metier, entreprise) {
   if (!points || !points.length) return '';
+  const pointFixe = entreprise
+    ? `Avant de débuter la rédaction de votre lettre, visitez le site internet de <strong>${entreprise}</strong> pour mieux comprendre leurs activités et personnaliser votre motivation.`
+    : `Avant de débuter la rédaction de votre lettre, renseignez-vous sur les activités de l'entreprise pour personnaliser votre motivation.`;
+
   return `<div class="lettre-bulle" style="margin-top:12px">
     <div class="lettre-bulle-title">✨ Pour votre lettre — ${metier}${entreprise ? ' chez ' + entreprise : ''}</div>
     <div class="lettre-bulle-points">
       ${points.map((p, i) => `<div class="lettre-point"><div class="lettre-point-num">${i+1}</div><div>${p}</div></div>`).join('')}
+      <div class="lettre-point" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <div class="lettre-point-num" style="background:var(--text3)">💡</div>
+        <div style="color:var(--text2)">${pointFixe}</div>
+      </div>
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--text3)">Ces conseils sont générés par IA — adaptez-les à votre situation.</div>
   </div>`;
 }
 
 function afficherBulleLettre(zone, metier, entreprise, points) {
+  const pointFixe = entreprise
+    ? `Avant de débuter la rédaction de votre lettre, visitez le site internet de <strong>${entreprise}</strong> pour mieux comprendre leurs activités et personnaliser votre motivation.`
+    : `Avant de débuter la rédaction de votre lettre, renseignez-vous sur les activités de l'entreprise pour personnaliser votre motivation.`;
+
   zone.innerHTML = `
     <div class="lettre-bulle">
       <div class="lettre-bulle-title">
@@ -3271,6 +3283,10 @@ function afficherBulleLettre(zone, metier, entreprise, points) {
             <div class="lettre-point-num">${i+1}</div>
             <div>${p}</div>
           </div>`).join('')}
+        <div class="lettre-point" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+          <div class="lettre-point-num" style="background:var(--text3)">💡</div>
+          <div style="color:var(--text2)">${pointFixe}</div>
+        </div>
       </div>
       <div style="margin-top:12px;font-size:11px;color:var(--text3)">
         Ces conseils sont générés par intelligence artificielle — adaptez-les à votre situation personnelle.
