@@ -578,12 +578,37 @@ body {
   margin-bottom: 8px;
   cursor: pointer;
   font-size: 13px;
+  position: relative;
 }
 .kanban-card.followup { border-color: #F59E0B; }
 .kanban-card-title { font-weight: 600; margin-bottom: 3px; }
 .kanban-card-sub { font-size: 12px; color: var(--text2); }
 .kanban-card-date { font-size: 11px; color: var(--text3); margin-top:6px; }
 .kanban-empty { font-size: 12px; color: var(--text3); text-align: center; padding: 16px 8px; }
+
+/* Bulle d'aperçu au survol (desktop uniquement) */
+.kanban-tooltip {
+  display: none;
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 0;
+  z-index: 300;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.13);
+  padding: 12px 14px;
+  min-width: 200px;
+  max-width: 260px;
+  pointer-events: none;
+  white-space: normal;
+}
+.kanban-card:hover .kanban-tooltip { display: block; }
+.kt-row { display: flex; gap: 8px; font-size: 12px; margin-bottom: 6px; align-items: flex-start; }
+.kt-row:last-child { margin-bottom: 0; }
+.kt-label { font-size: 11px; color: var(--text3); flex-shrink: 0; width: 56px; padding-top: 1px; }
+.kt-val { color: var(--text); line-height: 1.4; }
+@media (hover: none) { .kanban-tooltip { display: none !important; } }
 
 .followup-banner {
   background: #FFF3CD;
@@ -2377,7 +2402,7 @@ function renderKanban(list, items) {
     'En attente': {bg:'var(--attente-bg)',  text:'var(--attente-text)',  dot:'var(--attente-dot)'},
     'Reportée':   {bg:'var(--reportee-bg)', text:'var(--reportee-text)', dot:'var(--reportee-dot)'},
   };
-  const cols = statuts.map(statut => {
+  const cols = statuts.map((statut, colIdx) => {
     const c = colors[statut];
     const cards = items.filter(i => i.statut === statut);
     const cardsHTML = cards.length
@@ -2386,12 +2411,29 @@ function renderKanban(list, items) {
           const rappel = needsRappel(item);
           const days = daysSince(item.date);
           const cardClass = rappel ? ' rappel-due' : followup ? ' followup' : '';
+
+          // Construire la bulle d'aperçu (infos non visibles sur la carte)
+          const tooltipRows = [];
+          if (item.contact) tooltipRows.push('<div class="kt-row"><span class="kt-label">Contact</span><span class="kt-val">' + item.contact + '</span></div>');
+          if (item.telephone) tooltipRows.push('<div class="kt-row"><span class="kt-label">Tél.</span><span class="kt-val">' + item.telephone + '</span></div>');
+          if (item.email) tooltipRows.push('<div class="kt-row"><span class="kt-label">Email</span><span class="kt-val">' + item.email + '</span></div>');
+          if (item.notes) tooltipRows.push('<div class="kt-row"><span class="kt-label">Notes</span><span class="kt-val">' + item.notes + '</span></div>');
+          if (item.date_rappel) tooltipRows.push('<div class="kt-row"><span class="kt-label">Rappel</span><span class="kt-val">' + formatDate(item.date_rappel) + '</span></div>');
+          // Bulle à gauche pour les 2 dernières colonnes (évite débordement)
+          const tooltipPos = colIdx >= statuts.length - 2
+            ? 'right: calc(100% + 10px); left: auto;'
+            : 'left: calc(100% + 10px);';
+          const tooltip = tooltipRows.length
+            ? '<div class="kanban-tooltip" style="' + tooltipPos + '">' + tooltipRows.join('') + '</div>'
+            : '';
+
           return '<div class="kanban-card' + cardClass + '" onclick="openModal(\'' + item.id + '\')">'
             + '<div class="kanban-card-title">' + item.entreprise + '</div>'
             + '<div class="kanban-card-sub">' + item.metier + (item.type ? ' · ' + item.type : '') + '</div>'
             + (rappel ? '<div style="font-size:11px;color:var(--reportee-text);margin-top:4px">🔔 ' + rappelLabel(item) + '</div>' : '')
             + (followup && !rappel ? '<div style="font-size:11px;color:#92590A;margin-top:4px">⏰ ' + days + 'j sans réponse</div>' : '')
             + '<div class="kanban-card-date">' + (item.date ? formatDate(item.date) : '—') + '</div>'
+            + tooltip
             + '</div>';
         }).join('')
       : '<div class="kanban-empty">Aucune</div>';
@@ -3226,7 +3268,7 @@ async function preparerLettre(btn) {
     card.dataset.points = encodeURIComponent(JSON.stringify(points));
     btn.textContent = '✕ Fermer';
   } catch(e) {
-    zone.innerHTML = '<div class="lettre-bulle"><div class="lettre-error">Impossible de générer les conseils : ' + e.message + '</div></div>';
+    zone.innerHTML = '<div class="lettre-bulle"><div class="lettre-error">' + formatErreurLettre(e.message) + '</div></div>';
     btn.textContent = '✉ Préparer ma lettre';
   }
   btn.disabled = false;
@@ -3265,6 +3307,14 @@ function afficherBulleLettreDirect(points, metier, entreprise) {
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--text3)">Ces conseils sont générés par IA — adaptez-les à votre situation.</div>
   </div>`;
+}
+
+function formatErreurLettre(msg) {
+  if (msg.includes('503')) return 'Le service est momentanément surchargé. Réessayez dans quelques instants. (503)';
+  if (msg.includes('429')) return 'Trop de demandes simultanées. Réessayez dans une minute. (429)';
+  if (msg.includes('404')) return 'Service temporairement indisponible. Réessayez plus tard. (404)';
+  if (msg.includes('JSON')) return 'La réponse reçue était incomplète. Réessayez. (format)';
+  return 'Une erreur est survenue. Réessayez dans quelques instants. (' + msg + ')';
 }
 
 function afficherBulleLettre(zone, metier, entreprise, points) {
