@@ -570,6 +570,58 @@ body {
   font-size: 13px;
   font-weight: 600;
 }
+/* Drag & drop */
+.kanban-card[draggable="true"] { cursor: grab; }
+.kanban-card[draggable="true"]:active { cursor: grabbing; }
+.kanban-card.dragging {
+  opacity: 0.4;
+  transform: scale(0.97);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+.kanban-col.drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+  background: var(--accent-light);
+}
+.kanban-drop-indicator {
+  height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  margin: 3px 0;
+  transition: opacity 0.15s;
+}
+/* Toast annulation */
+#kanban-undo-toast {
+  position: fixed;
+  bottom: calc(24px + var(--safe-bottom));
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #2A2118;
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 500;
+  transition: transform 0.25s ease-out;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+#kanban-undo-toast.show { transform: translateX(-50%) translateY(0); }
+#kanban-undo-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #fff;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
 .kanban-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1648,6 +1700,12 @@ tr:last-child td { border-bottom: none; }
   <div id="pdf-overlay-content"></div>
 </div>
 
+<!-- ══ TOAST ANNULATION KANBAN ════════════════════════════════════════════════ -->
+<div id="kanban-undo-toast">
+  <span id="kanban-undo-msg">Statut modifié</span>
+  <button id="kanban-undo-btn" onclick="undoKanbanMove()">Ctrl+Z Annuler</button>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script>
@@ -2404,7 +2462,17 @@ function renderKanban(list, items) {
   };
   const cols = statuts.map((statut, colIdx) => {
     const c = colors[statut];
-    const cards = items.filter(i => i.statut === statut);
+
+    // Tri : rappels échus → followup → date décroissante
+    const cards = items
+      .filter(i => i.statut === statut)
+      .sort((a, b) => {
+        const ar = needsRappel(a) ? 2 : needsFollowUp(a) ? 1 : 0;
+        const br = needsRappel(b) ? 2 : needsFollowUp(b) ? 1 : 0;
+        if (br !== ar) return br - ar;
+        return new Date(b.date||0) - new Date(a.date||0);
+      });
+
     const cardsHTML = cards.length
       ? cards.map(item => {
           const followup = needsFollowUp(item);
@@ -2412,22 +2480,16 @@ function renderKanban(list, items) {
           const days = daysSince(item.date);
           const cardClass = rappel ? ' rappel-due' : followup ? ' followup' : '';
 
-          // Construire la bulle d'aperçu (infos non visibles sur la carte)
           const tooltipRows = [];
           if (item.contact) tooltipRows.push('<div class="kt-row"><span class="kt-label">Contact</span><span class="kt-val">' + item.contact + '</span></div>');
           if (item.telephone) tooltipRows.push('<div class="kt-row"><span class="kt-label">Tél.</span><span class="kt-val">' + item.telephone + '</span></div>');
           if (item.email) tooltipRows.push('<div class="kt-row"><span class="kt-label">Email</span><span class="kt-val">' + item.email + '</span></div>');
           if (item.notes) tooltipRows.push('<div class="kt-row"><span class="kt-label">Notes</span><span class="kt-val">' + item.notes + '</span></div>');
           if (item.date_rappel) tooltipRows.push('<div class="kt-row"><span class="kt-label">Rappel</span><span class="kt-val">' + formatDate(item.date_rappel) + '</span></div>');
-          // Bulle à gauche pour les 2 dernières colonnes (évite débordement)
-          const tooltipPos = colIdx >= statuts.length - 2
-            ? 'right: calc(100% + 10px); left: auto;'
-            : 'left: calc(100% + 10px);';
-          const tooltip = tooltipRows.length
-            ? '<div class="kanban-tooltip" style="' + tooltipPos + '">' + tooltipRows.join('') + '</div>'
-            : '';
+          const tooltipPos = colIdx >= statuts.length - 2 ? 'right: calc(100% + 10px); left: auto;' : 'left: calc(100% + 10px);';
+          const tooltip = tooltipRows.length ? '<div class="kanban-tooltip" style="' + tooltipPos + '">' + tooltipRows.join('') + '</div>' : '';
 
-          return '<div class="kanban-card' + cardClass + '" onclick="openModal(\'' + item.id + '\')">'
+          return '<div class="kanban-card' + cardClass + '" data-id="' + item.id + '" onclick="openModal(\'' + item.id + '\')">'
             + '<div class="kanban-card-title">' + item.entreprise + '</div>'
             + '<div class="kanban-card-sub">' + item.metier + (item.type ? ' · ' + item.type : '') + '</div>'
             + (rappel ? '<div style="font-size:11px;color:var(--reportee-text);margin-top:4px">🔔 ' + rappelLabel(item) + '</div>' : '')
@@ -2437,13 +2499,18 @@ function renderKanban(list, items) {
             + '</div>';
         }).join('')
       : '<div class="kanban-empty">Aucune</div>';
-    return '<div class="kanban-col">'
+
+    return '<div class="kanban-col" data-statut="' + statut + '">'
       + '<div class="kanban-col-header" style="background:' + c.bg + ';color:' + c.text + '">'
       + '<span style="width:8px;height:8px;border-radius:50%;background:' + c.dot + ';flex-shrink:0;display:inline-block"></span>'
       + statut + '<span style="margin-left:auto;font-size:11px;opacity:0.7">' + cards.length + '</span>'
       + '</div>' + cardsHTML + '</div>';
   }).join('');
+
   list.innerHTML = '<div class="kanban-wrap">' + cols + '</div>';
+
+  // Initialiser le drag & drop après rendu
+  setTimeout(initKanbanDragDrop, 0);
 }
 
 // ── MODAL ────────────────────────────────────────────────────────────────────
@@ -3547,6 +3614,212 @@ function postulerDepuisAlerte(metier, entreprise, lieu, idAlerte) {
   }, 150);
 }
 
+
+// ── KANBAN DRAG & DROP ────────────────────────────────────────────────────────
+
+let kanbanLastMove = null; // { id, oldStatut, newStatut } — pour Ctrl+Z
+let kanbanUndoTimer = null;
+let draggedCardId = null;
+
+function initKanbanDragDrop() {
+  const wrap = document.querySelector('.kanban-wrap');
+  if (!wrap) return;
+
+  // ── Desktop : HTML5 drag & drop ──────────────────────────────────────────
+  wrap.querySelectorAll('.kanban-card').forEach(card => {
+    card.setAttribute('draggable', 'true');
+    card.addEventListener('dragstart', onDragStart);
+    card.addEventListener('dragend', onDragEnd);
+  });
+
+  wrap.querySelectorAll('.kanban-col').forEach(col => {
+    col.addEventListener('dragover', onDragOver);
+    col.addEventListener('dragleave', onDragLeave);
+    col.addEventListener('drop', onDrop);
+  });
+
+  // ── Mobile : touch events ─────────────────────────────────────────────────
+  wrap.querySelectorAll('.kanban-card').forEach(card => {
+    card.addEventListener('touchstart', onTouchStart, { passive: true });
+  });
+
+  // ── Ctrl+Z ────────────────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      undoKanbanMove();
+    }
+  });
+
+  // ── Secousse mobile ───────────────────────────────────────────────────────
+  initShakeDetection();
+}
+
+// Desktop drag
+function onDragStart(e) {
+  draggedCardId = e.currentTarget.dataset.id;
+  setTimeout(() => e.currentTarget.classList.add('dragging'), 0);
+}
+
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+  draggedCardId = null;
+}
+
+function onDragOver(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget)) {
+    e.currentTarget.classList.remove('drag-over');
+  }
+}
+
+function onDrop(e) {
+  e.preventDefault();
+  const col = e.currentTarget;
+  col.classList.remove('drag-over');
+  const newStatut = col.dataset.statut;
+  if (draggedCardId && newStatut) {
+    moveKanbanCard(draggedCardId, newStatut);
+  }
+}
+
+// Mobile touch
+let touchCard = null, touchClone = null, touchStartX = 0, touchStartY = 0;
+
+function onTouchStart(e) {
+  touchCard = e.currentTarget;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  draggedCardId = touchCard.dataset.id;
+
+  const longPress = setTimeout(() => {
+    // Créer un clone visuel
+    const rect = touchCard.getBoundingClientRect();
+    touchClone = touchCard.cloneNode(true);
+    touchClone.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;opacity:0.85;z-index:999;pointer-events:none;transform:scale(1.03);box-shadow:0 8px 24px rgba(0,0,0,0.2);`;
+    document.body.appendChild(touchClone);
+    touchCard.style.opacity = '0.3';
+
+    touchCard.addEventListener('touchmove', onTouchMove, { passive: false });
+    touchCard.addEventListener('touchend', onTouchEnd);
+  }, 400);
+
+  touchCard.addEventListener('touchend', () => clearTimeout(longPress), { once: true });
+}
+
+function onTouchMove(e) {
+  if (!touchClone) return;
+  e.preventDefault();
+  const x = e.touches[0].clientX;
+  const y = e.touches[0].clientY;
+  touchClone.style.left = x - touchClone.offsetWidth / 2 + 'px';
+  touchClone.style.top = y - touchClone.offsetHeight / 2 + 'px';
+
+  // Highlight la colonne sous le doigt
+  document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+  const el = document.elementFromPoint(x, y);
+  const col = el?.closest('.kanban-col');
+  if (col) col.classList.add('drag-over');
+}
+
+function onTouchEnd(e) {
+  if (!touchClone) return;
+  const x = e.changedTouches[0].clientX;
+  const y = e.changedTouches[0].clientY;
+  const el = document.elementFromPoint(x, y);
+  const col = el?.closest('.kanban-col');
+  const newStatut = col?.dataset.statut;
+
+  touchClone.remove(); touchClone = null;
+  if (touchCard) touchCard.style.opacity = '';
+  document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+  touchCard?.removeEventListener('touchmove', onTouchMove);
+
+  if (draggedCardId && newStatut) moveKanbanCard(draggedCardId, newStatut);
+  touchCard = null; draggedCardId = null;
+}
+
+// Secousse mobile
+function initShakeDetection() {
+  if (!window.DeviceMotionEvent) return;
+  let lastShake = 0;
+  let lastAccel = { x: 0, y: 0, z: 0 };
+  window.addEventListener('devicemotion', e => {
+    const a = e.accelerationIncludingGravity;
+    if (!a) return;
+    const delta = Math.abs(a.x - lastAccel.x) + Math.abs(a.y - lastAccel.y) + Math.abs(a.z - lastAccel.z);
+    lastAccel = { x: a.x, y: a.y, z: a.z };
+    const now = Date.now();
+    if (delta > 30 && now - lastShake > 1000) {
+      lastShake = now;
+      undoKanbanMove();
+    }
+  });
+}
+
+// Déplacer une carte
+async function moveKanbanCard(id, newStatut) {
+  const items = allData[currentUser] || [];
+  const item = items.find(i => i.id === id);
+  if (!item || item.statut === newStatut) return;
+
+  const oldStatut = item.statut;
+  kanbanLastMove = { id, oldStatut, newStatut };
+
+  // Mise à jour locale immédiate
+  item.statut = newStatut;
+  item.date_rappel = newStatut === 'Reportée' ? item.date_rappel : '';
+  renderYouth();
+
+  // Sauvegarde en arrière-plan
+  try {
+    await gsUpdate(item);
+  } catch(e) {
+    // Rollback si erreur réseau
+    item.statut = oldStatut;
+    renderYouth();
+    toast('Erreur lors de la sauvegarde', true);
+    return;
+  }
+
+  // Toast d'annulation
+  showUndoToast(oldStatut, newStatut);
+}
+
+function showUndoToast(oldStatut, newStatut) {
+  const toast = document.getElementById('kanban-undo-toast');
+  const msg = document.getElementById('kanban-undo-msg');
+  if (!toast) return;
+  msg.textContent = oldStatut + ' → ' + newStatut;
+  toast.classList.add('show');
+  clearTimeout(kanbanUndoTimer);
+  kanbanUndoTimer = setTimeout(() => {
+    toast.classList.remove('show');
+    kanbanLastMove = null;
+  }, 5000);
+}
+
+async function undoKanbanMove() {
+  if (!kanbanLastMove) return;
+  const { id, oldStatut } = kanbanLastMove;
+  const items = allData[currentUser] || [];
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+
+  clearTimeout(kanbanUndoTimer);
+  document.getElementById('kanban-undo-toast')?.classList.remove('show');
+  kanbanLastMove = null;
+
+  item.statut = oldStatut;
+  renderYouth();
+  try { await gsUpdate(item); } catch(e) { toast('Erreur lors de l\'annulation', true); }
+  toast('Mouvement annulé ✓');
+}
 
 // ── STATISTIQUES ─────────────────────────────────────────────────────────────
 
