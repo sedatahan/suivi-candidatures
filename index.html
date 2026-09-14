@@ -594,9 +594,9 @@ body {
 /* Toast annulation */
 #kanban-undo-toast {
   position: fixed;
-  bottom: calc(24px + var(--safe-bottom));
+  bottom: calc(20px + var(--safe-bottom));
   left: 50%;
-  transform: translateX(-50%) translateY(80px);
+  transform: translateX(-50%) translateY(200px);
   background: #2A2118;
   color: #fff;
   border-radius: var(--radius);
@@ -606,9 +606,11 @@ body {
   align-items: center;
   gap: 12px;
   z-index: 500;
-  transition: transform 0.25s ease-out;
+  transition: transform 0.3s ease-out;
   white-space: nowrap;
   box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
 }
 #kanban-undo-toast.show { transform: translateX(-50%) translateY(0); }
 #kanban-undo-btn {
@@ -2067,6 +2069,7 @@ function setView(view) {
   currentView = view;
   document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('vbtn-' + view).classList.add('active');
+  if (view !== 'kanban') hideUndoToast();
   renderYouth();
 }
 let detailFilter = 'all';
@@ -3792,16 +3795,19 @@ async function moveKanbanCard(id, newStatut) {
 }
 
 function showUndoToast(oldStatut, newStatut) {
-  const toast = document.getElementById('kanban-undo-toast');
+  const toastEl = document.getElementById('kanban-undo-toast');
   const msg = document.getElementById('kanban-undo-msg');
-  if (!toast) return;
+  if (!toastEl) return;
   msg.textContent = oldStatut + ' → ' + newStatut;
-  toast.classList.add('show');
+  toastEl.classList.add('show');
   clearTimeout(kanbanUndoTimer);
-  kanbanUndoTimer = setTimeout(() => {
-    toast.classList.remove('show');
-    kanbanLastMove = null;
-  }, 5000);
+  kanbanUndoTimer = setTimeout(hideUndoToast, 5000);
+}
+
+function hideUndoToast() {
+  document.getElementById('kanban-undo-toast')?.classList.remove('show');
+  kanbanLastMove = null;
+  clearTimeout(kanbanUndoTimer);
 }
 
 async function undoKanbanMove() {
@@ -3811,15 +3817,18 @@ async function undoKanbanMove() {
   const item = items.find(i => i.id === id);
   if (!item) return;
 
-  clearTimeout(kanbanUndoTimer);
-  document.getElementById('kanban-undo-toast')?.classList.remove('show');
-  kanbanLastMove = null;
+  hideUndoToast();
 
   item.statut = oldStatut;
   renderYouth();
   try { await gsUpdate(item); } catch(e) { toast('Erreur lors de l\'annulation', true); }
   toast('Mouvement annulé ✓');
 }
+
+// Masquer le toast si l'app passe en arrière-plan (mobile)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) hideUndoToast();
+});
 
 // ── STATISTIQUES ─────────────────────────────────────────────────────────────
 
