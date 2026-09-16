@@ -1115,19 +1115,21 @@ body {
 }
 
 .detail-panel {
+  display: none; /* template caché, jamais affiché directement */
+}
+.detail-panel-inline {
   background: var(--surface);
-  border: 1px solid var(--accent);
+  border: 1.5px solid var(--accent);
   border-radius: var(--radius);
   padding: 20px;
-  margin-bottom: 12px;
-  display: none;
-  grid-column: 1 / -1; /* s'étend sur toute la largeur de la grille */
-  animation: accordionOpen 0.2s ease-out;
+  margin: 4px 0 8px;
+  grid-column: 1 / -1;
+  animation: accordionOpen 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
-.detail-panel.open { display: block; }
 @keyframes accordionOpen {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-10px) scaleY(0.96); }
+  to   { opacity: 1; transform: translateY(0) scaleY(1); }
 }
 .detail-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
 .detail-name { font-size: 18px; font-weight: 600; }
@@ -2747,13 +2749,17 @@ function filterCounselor(filter, btn) {
 }
 
 function showDetail(code) {
-  const panel = document.getElementById('detail-panel');
+  const grid = document.getElementById('counselor-grid');
 
   // Toggle : reclique sur la même carte → fermer
-  if (currentDetailCode === code && panel.style.display !== 'none') {
+  if (currentDetailCode === code) {
     closeDetail();
     return;
   }
+
+  // Fermer le panel précédent s'il existe dans la grille
+  const existingPanel = grid.querySelector('.detail-panel-inline');
+  if (existingPanel) existingPanel.remove();
 
   const previousLastSeen = lastSeenMap[code] || null;
   lastSeenMap[code] = new Date().toISOString();
@@ -2764,18 +2770,43 @@ function showDetail(code) {
   // Réinitialiser les filtres
   detailFilter = 'all';
   detailTypeFilter = 'all';
-  const detailSel = document.getElementById('detail-statut-select');
-  if (detailSel) detailSel.value = 'all';
-  document.querySelectorAll('#detail-type-filter-bar .filter-btn').forEach((b,i) => b.classList.toggle('active', i===0));
 
-  // Remplir le panneau
+  // Surbrillance
+  grid.querySelectorAll('.youth-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.code === code);
+  });
+
+  // Créer le panneau inline dans la grille
   const items = allData[code] || [];
   const nomD = jeunesMap[code] || '';
   const titleD = nomD
     ? `${nomD} (${code}) — ${items.length} candidature${items.length>1?'s':''}`
     : `${code} — ${items.length} candidature${items.length>1?'s':''}`;
-  document.getElementById('detail-name').textContent = titleD;
 
+  const panel = document.createElement('div');
+  panel.className = 'detail-panel-inline';
+  panel.style.cssText = 'grid-column:1/-1;animation:accordionOpen 0.25s ease-out;';
+  panel.innerHTML = document.getElementById('detail-panel').innerHTML;
+  panel.querySelector('#detail-name').textContent = titleD;
+
+  // Insérer après la carte cliquée
+  const card = grid.querySelector(`[data-code="${code}"]`);
+  if (card) card.after(panel);
+  else grid.appendChild(panel);
+
+  // Rebrancher les event listeners sur les éléments clonés
+  panel.querySelector('[id="detail-statut-select"]')?.addEventListener('change', function() { setDetailFilterFromSelect(this); });
+  panel.querySelectorAll('[id="detail-type-filter-bar"] .filter-btn').forEach((b,i) => {
+    b.classList.toggle('active', i===0);
+    const types = ['all','Stage','Apprentissage'];
+    b.onclick = () => { setDetailTypeFilter(types[i], b); };
+  });
+  panel.querySelector('.btn-close')?.addEventListener('click', closeDetail);
+  panel.querySelector('#btn-archive')?.addEventListener('click', archiveJeune);
+  panel.querySelector('[onclick*="showStatsForJeune"]')?.addEventListener('click', () => showStatsForJeune(currentDetailCode));
+  panel.querySelector('[onclick*="exportPDF"]')?.addEventListener('click', () => exportPDF('counselor'));
+
+  // Charger les favoris
   renderDetailFavoris([]);
   fetch(gsUrl('check_code', '&code=' + encodeURIComponent(code)))
     .then(r => r.json())
@@ -2785,14 +2816,6 @@ function showDetail(code) {
     }).catch(() => {});
 
   renderDetailTable(code);
-
-  // Afficher le panneau
-  panel.style.display = 'block';
-
-  // Surbrillance de la carte active
-  document.querySelectorAll('#counselor-grid .youth-card').forEach(c => {
-    c.classList.toggle('active', c.dataset.code === code);
-  });
 
   // Scroll vers le panneau
   setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
@@ -2808,7 +2831,9 @@ function renderDetailTable(code) {
   });
   if (detailFilter !== 'all') sorted = sorted.filter(i => i.statut === detailFilter);
   if (detailTypeFilter !== 'all') sorted = sorted.filter(i => i.type === detailTypeFilter);
-  const tbody = document.getElementById('detail-tbody');
+  const grid = document.getElementById('counselor-grid');
+  const panelEl = grid?.querySelector('.detail-panel-inline') || document.getElementById('detail-panel');
+  const tbody = panelEl?.querySelector('#detail-tbody') || document.getElementById('detail-tbody');
   if (!sorted.length) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">Aucune candidature dans cette catégorie</td></tr>`;
     return;
@@ -2841,15 +2866,14 @@ function renderDetailTable(code) {
 }
 
 function closeDetail() {
-  const panel = document.getElementById('detail-panel');
-  if (panel) panel.style.display = 'none';
+  const grid = document.getElementById('counselor-grid');
+  const inlinePanel = grid?.querySelector('.detail-panel-inline');
+  if (inlinePanel) inlinePanel.remove();
   currentDetailCode = null;
   currentDetailLastSeen = null;
   detailFilter = 'all';
   detailTypeFilter = 'all';
-  const dSel = document.getElementById('detail-statut-select');
-  if (dSel) dSel.value = 'all';
-  document.querySelectorAll('#counselor-grid .youth-card').forEach(c => c.classList.remove('active'));
+  grid?.querySelectorAll('.youth-card').forEach(c => c.classList.remove('active'));
 }
 
 async function archiveJeune() {
@@ -4129,7 +4153,9 @@ function renderFavorisHeader() {
 }
 
 function renderDetailFavoris(favoris) {
-  const container = document.getElementById('detail-favoris');
+  const grid2 = document.getElementById('counselor-grid');
+  const panelEl2 = grid2?.querySelector('.detail-panel-inline') || document.getElementById('detail-panel');
+  const container = panelEl2?.querySelector('#detail-favoris') || document.getElementById('detail-favoris');
   if (!container) return;
   if (!favoris || !favoris.length) {
     container.innerHTML = '<span style="font-size:11px;color:var(--text3)">Aucun projet favori défini</span>';
