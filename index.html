@@ -1415,8 +1415,7 @@ tr:last-child td { border-bottom: none; }
         <option value="Relancée">Relancées</option>
         <option value="Entretien">Entretiens</option>
         <option value="Refus">Refus</option>
-        <option value="En attente">En attente</option>
-        <option value="Reportée">Reportées</option>
+                <option value="Reportée">Reportées</option>
       </select>
     </div>
     <div class="filter-bar" id="youth-type-filter-bar" style="margin-bottom:14px">
@@ -1478,8 +1477,7 @@ tr:last-child td { border-bottom: none; }
         <button class="filter-btn" onclick="filterCounselor('Envoyée', this)">Envoyées</button>
         <button class="filter-btn" onclick="filterCounselor('Relancée', this)">Relancées</button>
         <button class="filter-btn" onclick="filterCounselor('Refus', this)">Refus</button>
-        <button class="filter-btn" onclick="filterCounselor('En attente', this)">En attente</button>
-        <button class="filter-btn" onclick="filterCounselor('Reportée', this)">Reportées</button>
+                <button class="filter-btn" onclick="filterCounselor('Reportée', this)">Reportées</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <div style="display:flex;background:var(--surface2);border-radius:var(--radius);padding:3px;gap:2px">
@@ -1546,7 +1544,6 @@ tr:last-child td { border-bottom: none; }
           <option value="Relancée">Relancées</option>
           <option value="Entretien">Entretiens</option>
           <option value="Refus">Refus</option>
-          <option value="En attente">En attente</option>
           <option value="Reportée">Reportées</option>
         </select>
       </div>
@@ -1601,7 +1598,6 @@ tr:last-child td { border-bottom: none; }
           <option>Relancée</option>
           <option>Entretien</option>
           <option>Refus</option>
-          <option>En attente</option>
           <option>Reportée</option>
         </select>
       </div>
@@ -2357,7 +2353,7 @@ function renderYouth() {
   const items = allData[currentUser] || [];
   const total = items.length;
   const entretien = items.filter(i => i.statut === 'Entretien').length;
-  const attente = items.filter(i => ['Envoyée','Relancée','En attente'].includes(i.statut)).length;
+  const attente = items.filter(i => ['Envoyée','Relancée'].includes(i.statut)).length;
   const refus = items.filter(i => i.statut === 'Refus').length;
 
   document.getElementById('stat-total').textContent = total;
@@ -2456,13 +2452,12 @@ function renderBloc(list, items) {
 }
 
 function renderKanban(list, items) {
-  const statuts = ['Envoyée', 'Relancée', 'Entretien', 'Refus', 'En attente', 'Reportée'];
+  const statuts = ['Envoyée', 'Relancée', 'Entretien', 'Refus', 'Reportée'];
   const colors = {
     'Envoyée':    {bg:'var(--envoyee-bg)',  text:'var(--envoyee-text)',  dot:'var(--envoyee-dot)'},
     'Relancée':   {bg:'var(--relancee-bg)', text:'var(--relancee-text)', dot:'var(--relancee-dot)'},
     'Entretien':  {bg:'var(--entretien-bg)',text:'var(--entretien-text)',dot:'var(--entretien-dot)'},
     'Refus':      {bg:'var(--refus-bg)',    text:'var(--refus-text)',    dot:'var(--refus-dot)'},
-    'En attente': {bg:'var(--attente-bg)',  text:'var(--attente-text)',  dot:'var(--attente-dot)'},
     'Reportée':   {bg:'var(--reportee-bg)', text:'var(--reportee-text)', dot:'var(--reportee-dot)'},
   };
   const cols = statuts.map((statut, colIdx) => {
@@ -3936,7 +3931,6 @@ function renderStats(items, favoris, nom) {
     { label: 'Envoyées',   val: nb('Envoyée'),    color: '#4F46E5' },
     { label: 'Entretiens', val: nb('Entretien'),  color: '#059669' },
     { label: 'Relancées',  val: nb('Relancée'),   color: '#F59E0B' },
-    { label: 'En attente', val: nb('En attente'), color: '#B5A593' },
     { label: 'Refus',      val: nb('Refus'),      color: '#EF4444' },
   ];
   const maxVal = Math.max(...statuts.map(s => s.val), 1);
@@ -4724,7 +4718,6 @@ function exportPDF(mode) {
     { label: 'Envoyées',   val: nba('Envoyée'),    color: '#4F46E5' },
     { label: 'Entretiens', val: nba('Entretien'),  color: '#059669' },
     { label: 'Relancées',  val: nba('Relancée'),   color: '#F59E0B' },
-    { label: 'En attente', val: nba('En attente'), color: '#B5A593' },
     { label: 'Refus',      val: nba('Refus'),      color: '#EF4444' },
   ].map(s => {
     const pct = totalAll ? Math.round(s.val / totalAll * 100) : 0;
@@ -4776,7 +4769,6 @@ function exportPDF(mode) {
     'Relancée':   { bg:'#FFF8E6', color:'#92590A' },
     'Entretien':  { bg:'#ECFDF5', color:'#065F46' },
     'Refus':      { bg:'#FEF2F2', color:'#991B1B' },
-    'En attente': { bg:'#F0EDE5', color:'#7A6A58' },
   };
 
   const cardHTML = (item) => {
@@ -4832,7 +4824,7 @@ function exportPDF(mode) {
         ${[
           ['Total', total, '#2A2118'],
           ['Entretiens', nb('Entretien'), '#065F46'],
-          ['En cours', nb('Envoyée') + nb('Relancée') + nb('En attente'), '#3730A3'],
+          ['En cours', nb('Envoyée') + nb('Relancée'), '#3730A3'],
           ['Refus', nb('Refus'), '#991B1B']
         ].map(([lbl, val, color]) => `
           <div style="text-align:center;border:1px solid #E8DFD3;border-radius:8px;padding:12px 6px">
