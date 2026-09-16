@@ -1482,9 +1482,9 @@ tr:last-child td { border-bottom: none; }
       <div style="display:flex;gap:8px;align-items:center">
         <div style="display:flex;background:var(--surface2);border-radius:var(--radius);padding:3px;gap:2px">
           <button id="cv-btn-grid" onclick="setCounselorView('grid')" title="Vue grille"
-            style="padding:4px 8px;border:none;border-radius:6px;cursor:pointer;font-size:13px;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,0.1);font-family:'DM Sans',sans-serif">⊞</button>
+            style="padding:4px 8px;border:none;border-radius:6px;cursor:pointer;font-size:13px;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,0.1);font-family:'DM Sans',sans-serif">⊞ <span id="cv-count-grid" style="font-size:11px;opacity:0.6"></span></button>
           <button id="cv-btn-list" onclick="setCounselorView('list')" title="Vue liste"
-            style="padding:4px 8px;border:none;border-radius:6px;cursor:pointer;font-size:13px;background:transparent;font-family:'DM Sans',sans-serif;color:var(--text2)">☰</button>
+            style="padding:4px 8px;border:none;border-radius:6px;cursor:pointer;font-size:13px;background:transparent;font-family:'DM Sans',sans-serif;color:var(--text2)">☰ <span id="cv-count-list" style="font-size:11px;opacity:0.6"></span></button>
         </div>
         <button class="btn-add" onclick="openNewJeune()" style="padding:6px 14px;font-size:13px">+ Nouveau jeune</button>
         <button class="btn-secondary" onclick="toggleArchives()" id="btn-show-archives" style="white-space:nowrap;padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);font-size:12px">📦 Archives</button>
@@ -1755,8 +1755,7 @@ async function restoreSession() {
       currentConseiller = conseiller;
       currentRole = 'counselor';
       document.getElementById('counselor-header-name').textContent = conseiller.nom;
-      allData = await gsRead();
-      jeunesMap = await gsReadJeunes();
+      [allData, jeunesMap] = await Promise.all([gsRead(), gsReadJeunes()]);
       showScreen('counselor');
       renderCounselor();
     } else if (role === 'youth') {
@@ -2283,17 +2282,12 @@ async function loginCounselor() {
     document.getElementById('counselor-header-name').textContent = json.nom;
     btnC.textContent = 'Chargement...';
     try {
-      allData = await gsRead();
+      [allData, jeunesMap] = await Promise.all([gsRead(), gsReadJeunes()]);
     } catch(e) {
       showError('Erreur de connexion.');
       btnC.textContent = 'Accéder au tableau de bord →';
       btnC.disabled = false;
       return;
-    }
-    try {
-      jeunesMap = await gsReadJeunes();
-    } catch(e) {
-      jeunesMap = {};
     }
     showScreen('counselor');
     renderCounselor();
@@ -2689,6 +2683,14 @@ function renderCounselor() {
 
   const isListView = counselorView === 'list';
   grid.className = isListView ? 'youth-list-view' : 'youth-grid';
+
+  // Mettre à jour le badge compteur sur les deux boutons
+  const n = sorted.length;
+  const countLabel = n > 0 ? n : '';
+  const cgGrid = document.getElementById('cv-count-grid');
+  const cgList = document.getElementById('cv-count-list');
+  if (cgGrid) cgGrid.textContent = countLabel;
+  if (cgList) cgList.textContent = countLabel;
 
   grid.innerHTML = sorted.map(code => {
     const items = allData[code] || [];
