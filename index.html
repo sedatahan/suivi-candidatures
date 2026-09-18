@@ -5070,22 +5070,17 @@ function closePdfOverlay() {
     rafId = requestAnimationFrame(frame);
   });
 })();
-// Force --safe-top pour les iPhones avec Dynamic Island (Safari retourne parfois 0 en portrait)
+// Force --safe-top pour iPhone 17 Pro / iOS 27 — zone de flou plus grande
 (function() {
   function applySafeArea() {
-    const val = parseInt(getComputedStyle(document.documentElement)
-      .getPropertyValue('--safe-top')) || 0;
-    if (val < 10) {
-      // Détecter Dynamic Island via screen height
-      const h = Math.max(window.screen.height, window.screen.width);
-      // iPhone 17 Pro / 16 Pro / 15 Pro : safe-area-inset-top = 62
-      // iPhone 16 / 15 : 59 — iPhone 14 Pro : 59
-      const safeTop = h >= 850 ? 62 : h >= 800 ? 59 : 44;
-      document.documentElement.style.setProperty('--safe-top', safeTop + 'px');
+    const h = Math.max(window.screen.height, window.screen.width);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS && h >= 850) {
+      // iPhone 17 Pro : zone floutée iOS 27 plus haute que safe-area standard
+      document.documentElement.style.setProperty('--safe-top', '80px');
     }
   }
   applySafeArea();
-  window.addEventListener('resize', applySafeArea);
 })();
 </script>
 </body>
