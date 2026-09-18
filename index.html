@@ -41,7 +41,7 @@
 html { background: #FFFFFF; } /* Comble le gap sous la barre de statut iOS */
 
 :root {
-  --safe-top: env(safe-area-inset-top, 100px);
+  --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -231,8 +231,8 @@ body {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   padding: 0 20px;
-  padding-top: env(safe-area-inset-top, 62px);
-  height: calc(58px + env(safe-area-inset-top, 62px));
+  padding-top: var(--safe-top);
+  height: calc(58px + var(--safe-top));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -5070,18 +5070,7 @@ function closePdfOverlay() {
     rafId = requestAnimationFrame(frame);
   });
 })();
-// Force --safe-top pour iPhone 17 Pro / iOS 27 — zone de flou plus grande
-(function() {
-  function applySafeArea() {
-    const h = Math.max(window.screen.height, window.screen.width);
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isIOS && h >= 850) {
-      // iPhone 17 Pro : zone floutée iOS 27 plus haute que safe-area standard
-      document.documentElement.style.setProperty('--safe-top', '80px');
-    }
-  }
-  applySafeArea();
-})();
+// Safe area gérée nativement par iOS en mode default
 </script>
 </body>
 </html>
