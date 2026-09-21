@@ -3615,10 +3615,32 @@ function renderAlerteCard(a, isArchive) {
   const dateAffichee = formatAlertDate(a.date_mail);
   const pointsData = a.points ? encodeURIComponent(JSON.stringify(a.points)) : '';
 
+  // Badge source
+  const sources = (a.source || '').split('|').filter(Boolean);
+  const sourceBadges = sources.map(s => {
+    const label = s === 'orientation.ch' ? 'orientation.ch' : 'jobup.ch';
+    const color = s === 'orientation.ch' ? '#059669' : '#2563EB';
+    return `<span style="font-size:10px;font-weight:600;color:${color};background:${color}18;padding:2px 6px;border-radius:10px">${label}</span>`;
+  }).join(' ');
+
+  // Liens vers les annonces
+  const liensBtns = [];
+  if (a.lien) {
+    const label = sources[0] === 'jobup.ch' ? 'Voir sur jobup.ch ↗' : 'Voir sur orientation.ch ↗';
+    liensBtns.push(`<a href="${a.lien}" target="_blank" rel="noopener" class="alerte-btn-link">${label}</a>`);
+  }
+  if (a.lien2) {
+    const label2 = sources.includes('jobup.ch') && sources.includes('orientation.ch')
+      ? (a.lien && a.lien.includes('jobup') ? 'Voir sur orientation.ch ↗' : 'Voir sur jobup.ch ↗')
+      : 'Voir l\'annonce ↗';
+    liensBtns.push(`<a href="${a.lien2}" target="_blank" rel="noopener" class="alerte-btn-link">${label2}</a>`);
+  }
+
   return `<div class="alerte-card${isArchive ? '" style="opacity:0.75' : ''}" data-points="${pointsData}" data-metier="${metierSafe}" data-entreprise="${entrepriseSafe}">
     <div class="alerte-card-header">
       <div class="alerte-metier">${a.metier || '—'}</div>
-      <div style="display:flex;align-items:center;gap:6px">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        ${sourceBadges}
         ${isArchive ? '<span style="font-size:11px;color:#059669;font-weight:600">✓ Postulé</span>' : ''}
         ${dateAffichee ? '<span style="font-size:11px;color:var(--text3)">' + dateAffichee + '</span>' : ''}
       </div>
@@ -3627,7 +3649,7 @@ function renderAlerteCard(a, isArchive) {
     ${a.lieu ? '<div class="alerte-lieu">📍 ' + a.lieu + '</div>' : ''}
     ${a.places ? '<div class="alerte-detail" style="font-size:12px;color:var(--text3)">Places : ' + a.places + '</div>' : ''}
     <div class="alerte-actions">
-      ${a.lien ? '<a href="' + a.lien + '" target="_blank" rel="noopener" class="alerte-btn-link">Voir l\'annonce ↗</a>' : ''}
+      ${liensBtns.join('')}
       <button class="alerte-btn-lettre" onclick="preparerLettre(this)">✉ Préparer ma lettre</button>
       ${!isArchive ? `<button class="alerte-btn-postuler" onclick="postulerDepuisAlerte('${metierSafe}','${entrepriseSafe}','${lieuSafe}','${idSafe}')">✚ J'ai postulé</button>` : ''}
     </div>
