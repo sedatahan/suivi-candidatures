@@ -1269,7 +1269,7 @@ tr:last-child td { border-bottom: none; }
       <div id="tab-youth">
         <div class="field">
           <label>Votre code personnel</label>
-          <input type="text" id="youth-code" placeholder="Ex : SED01" autocomplete="off" autocapitalize="characters"
+          <input type="text" id="youth-code" name="username" placeholder="Ex : SED01" autocomplete="username" autocapitalize="characters"
             oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')loginYouth()">
         </div>
         <button class="btn-primary" id="btn-login-youth" onclick="loginYouth()">Accéder à mon suivi →</button>
@@ -1278,13 +1278,13 @@ tr:last-child td { border-bottom: none; }
       <div id="tab-counselor" style="display:none">
         <div class="field">
           <label>Votre code conseiller</label>
-          <input type="text" id="counselor-code" placeholder="Ex : SEDA" autocomplete="off"
+          <input type="text" id="counselor-code" name="username" placeholder="Ex : SEDA" autocomplete="username"
             oninput="this.value=this.value.toUpperCase()"
             onkeydown="if(event.key==='Enter')loginCounselor()">
         </div>
         <div class="field">
           <label>Mot de passe</label>
-          <input type="password" id="counselor-pwd" placeholder="••••••••"
+          <input type="password" id="counselor-pwd" name="password" placeholder="••••••••" autocomplete="current-password"
             onkeydown="if(event.key==='Enter')loginCounselor()">
         </div>
         <button class="btn-primary" id="btn-login-counselor" onclick="loginCounselor()">Accéder au tableau de bord →</button>
