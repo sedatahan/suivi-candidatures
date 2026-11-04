@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="app-version" content="2026.11.04-1">
+<meta name="app-update-level" content="minor">
 <title>Suivi Candidatures</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1372,6 +1374,35 @@ tr:last-child td { border-bottom: none; }
 .mdash-favoris-text strong { display: block; font-size: 14px; font-weight: 600; color: var(--m-ink); margin-bottom: 2px; }
 .mdash-favoris-cta { flex-shrink: 0; font-size: 13px; font-weight: 600; color: var(--m-accent); display: flex; align-items: center; gap: 4px; }
 .mdash-favoris-cta svg { width: 14px; height: 14px; stroke: currentColor; fill: none; }
+/* ── Écran de mise à jour ── */
+#update-screen {
+  display: none; position: fixed; inset: 0; z-index: 10000;
+  background: var(--m-bg); color: var(--m-ink);
+  padding: calc(24px + var(--safe-top)) 24px calc(24px + var(--safe-bottom));
+  align-items: center; justify-content: center;
+}
+#update-screen.show { display: flex; animation: update-in 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes update-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.update-card { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
+.update-icon { width: 44px; height: 44px; color: var(--m-accent); margin-bottom: 8px; }
+.update-icon svg { width: 100%; height: 100%; stroke: currentColor; fill: none; }
+.update-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; line-height: 1.15; margin: 0; }
+.update-text { font-family: 'Public Sans', sans-serif; font-size: 15.5px; line-height: 1.5; color: var(--m-ink-soft); margin: 0; }
+.update-hint { font-family: 'Public Sans', sans-serif; font-size: 13.5px; line-height: 1.45; color: var(--m-amber-ink); background: var(--m-amber-soft); border-radius: 10px; padding: 10px 12px; margin: 0; display: none; }
+.update-hint.show { display: block; }
+.update-btn {
+  margin-top: 12px; min-height: 56px; width: 100%; border: none; border-radius: var(--m-radius);
+  background: var(--m-accent); color: #fff; cursor: pointer;
+  font-family: 'Public Sans', sans-serif; font-weight: 600; font-size: 16px;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.update-btn:active { transform: scale(0.98); }
+.update-btn:disabled { opacity: 0.6; cursor: default; }
+@media (prefers-reduced-motion: reduce) {
+  #update-screen.show { animation: none; }
+  .update-btn { transition: none; }
+}
+
 .mdash-plane-wrap { flex: 1; display: flex; align-items: center; justify-content: flex-end; min-height: 230px; margin-top: 6px; }
 .mdash-plane-inner { width: 100%; max-width: 380px; margin: 0 auto; }
 
@@ -2214,6 +2245,16 @@ tr:last-child td { border-bottom: none; }
 <div id="kanban-undo-toast">
   <span id="kanban-undo-msg">Statut modifié</span>
   <button id="kanban-undo-btn" onclick="undoKanbanMove()">Ctrl+Z Annuler</button>
+</div>
+
+<div id="update-screen" role="alertdialog" aria-labelledby="update-title" aria-describedby="update-text">
+  <div class="update-card">
+    <span class="update-icon"><svg viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.2"></path><polyline points="3 18 5.5 18.2 5.7 15.5"></polyline><path d="M3 12a9 9 0 0 1 15.5-6.2"></path><polyline points="21 6 18.5 5.8 18.3 8.5"></polyline></svg></span>
+    <h2 class="update-title" id="update-title">Nouvelle mise à jour</h2>
+    <p class="update-text" id="update-text">Une nouvelle version de l'application est disponible. Mettez-la à jour pour profiter des dernières nouveautés.</p>
+    <p class="update-hint" id="update-hint">Si ce message revient, fermez complètement l'application en la faisant glisser vers le haut, puis rouvrez-la.</p>
+    <button class="update-btn" id="update-btn" onclick="applyAppUpdate()">Mettre à jour</button>
+  </div>
 </div>
 
 <div id="toast" class="toast"></div>
@@ -3488,6 +3529,10 @@ async function saveCandidature() {
   btnSave.textContent = 'Enregistrement...';
   btnSave.disabled = true;
 
+  // Valeurs à conserver : closeModal() remet editingId et pendingAlertId à null
+  const wasEditing = !!editingId;
+  const alertIdToSave = (!editingId && pendingAlertId) ? pendingAlertId : null;
+
   try {
     if (editingId) {
       const idx = allData[currentUser].findIndex(i => i.id === editingId);
@@ -3499,16 +3544,24 @@ async function saveCandidature() {
     }
     closeModal();
     renderYouth();
-    toast(editingId ? 'Candidature mise à jour ✓' : 'Candidature ajoutée ✓');
-    // Marquer l'alerte comme postulée si vient d'une annonce
-    if (pendingAlertId && !editingId) {
-      alertesPostulees.add(pendingAlertId);
+    toast(wasEditing ? 'Candidature mise à jour ✓' : 'Candidature ajoutée ✓');
+    // Marquer l'alerte comme postulée si la candidature vient d'une annonce
+    if (alertIdToSave) {
+      alertesPostulees.add(alertIdToSave);
       updateDashboardBadge();
-      fetch(gsUrl('save_alerte_postulee',
-        '&code=' + encodeURIComponent(currentUser) +
-        '&id_alerte=' + encodeURIComponent(pendingAlertId)
-      )).catch(() => {});
-      pendingAlertId = null;
+      try {
+        const resAlerte = await fetch(gsUrl('save_alerte_postulee',
+          '&code=' + encodeURIComponent(currentUser) +
+          '&id_alerte=' + encodeURIComponent(alertIdToSave)
+        ));
+        const jsonAlerte = await resAlerte.json().catch(() => null);
+        if (!resAlerte.ok || (jsonAlerte && jsonAlerte.error)) throw new Error('save_alerte_postulee');
+      } catch(e) {
+        // La candidature est enregistrée ; on retire seulement la marque locale pour que l'annonce reste visible
+        alertesPostulees.delete(alertIdToSave);
+        updateDashboardBadge();
+        toast("Candidature ajoutée, mais l'annonce n'a pas pu être marquée comme postulée.", true);
+      }
     }
   } catch(e) {
     toast('Erreur lors de la sauvegarde', true);
@@ -6057,6 +6110,73 @@ initPlaneScene({
   ctaText: null, ctaArrowSvg: null
 });
 // Safe area gérée nativement par iOS en mode default
+
+// ── MISE À JOUR DE L'APP ─────────────────────────────────────────────────────
+// Une app installée reste en mémoire : sans fermeture complète, elle ne recharge jamais.
+// On compare donc sa version (meta app-version) à celle du serveur, au lancement et au retour au premier plan.
+// Le niveau « major » (meta app-update-level du serveur) affiche l'écran de mise à jour ; « minor » ne fait rien.
+const APP_VERSION = (document.querySelector('meta[name="app-version"]') || {}).content || '';
+let lastVersionCheck = 0;
+let updateScreenShown = false;
+
+async function checkAppVersion(force) {
+  if (updateScreenShown || !APP_VERSION || navigator.onLine === false) return;
+  const now = Date.now();
+  if (!force && now - lastVersionCheck < 60000) return;
+  lastVersionCheck = now;
+  try {
+    // Seul le début du fichier est utile (les balises meta sont dans le head)
+    const res = await fetch('./index.html?vcheck=' + now, { cache: 'no-store', headers: { Range: 'bytes=0-4095' } });
+    if (!res.ok) return;
+    const head = await res.text();
+    const remoteVersion = (head.match(/<meta name="app-version" content="([^"]+)"/) || [])[1];
+    const level = (head.match(/<meta name="app-update-level" content="([^"]+)"/) || [])[1] || 'minor';
+    if (!remoteVersion) return;
+    if (remoteVersion === APP_VERSION) {
+      try { sessionStorage.removeItem('cap_update_tries'); } catch(e) {}
+      return;
+    }
+    if (level === 'major') showUpdateScreen();
+  } catch(e) { /* silencieux : la vérification n'est jamais bloquante */ }
+}
+
+function showUpdateScreen() {
+  updateScreenShown = true;
+  let tries = 0;
+  try { tries = parseInt(sessionStorage.getItem('cap_update_tries') || '0', 10) || 0; } catch(e) {}
+  const hint = document.getElementById('update-hint');
+  if (hint) hint.classList.toggle('show', tries >= 1);
+  const el = document.getElementById('update-screen');
+  if (el) el.classList.add('show');
+}
+
+async function applyAppUpdate() {
+  const btn = document.getElementById('update-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Mise à jour en cours...'; }
+  try {
+    const tries = (parseInt(sessionStorage.getItem('cap_update_tries') || '0', 10) || 0) + 1;
+    sessionStorage.setItem('cap_update_tries', String(tries));
+  } catch(e) {}
+  try {
+    // On ne désinscrit jamais le service worker : cela supprimerait l'abonnement aux notifications
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.update().catch(() => {})));
+    }
+    if (window.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch(e) {}
+  // Adresse différente à chaque fois : contourne tout cache résiduel. La session (sessionStorage) est conservée.
+  location.replace(location.pathname + '?maj=' + Date.now());
+}
+
+window.addEventListener('load', () => checkAppVersion(true));
+window.addEventListener('pageshow', (e) => { if (e.persisted) checkAppVersion(true); });
+window.addEventListener('online', () => checkAppVersion());
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkAppVersion(); });
+
 // ── SERVICE WORKER ────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
