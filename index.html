@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="app-version" content="2026.11.04-1">
-<meta name="app-update-level" content="minor">
+<meta name="app-version" content="2026.11.17-9">
+<meta name="app-update-level" content="major">
 <title>Suivi Candidatures</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -39,6 +39,7 @@
   --refus-bg: #FEF2F2; --refus-text: #991B1B; --refus-dot: #EF4444;
   --attente-bg: #F0EDE5; --attente-text: #7A6A58; --attente-dot: #B5A593;
   --reportee-bg: #F3E8FF; --reportee-text: #6B21A8; --reportee-dot: #A855F7;
+  --stage-bg: oklch(93% 0.05 190); --stage-text: oklch(35% 0.08 190); --stage-dot: oklch(60% 0.12 190);
 
   /* ── TOKENS MOBILES (remodelage) — scopés aux 4 écrans jeune mobiles, n'affectent jamais le desktop ni la page conseiller ── */
   --m-bg: oklch(96% 0.012 80);
@@ -496,6 +497,7 @@ body {
 .badge-Entretien  { background: var(--entretien-bg);color: var(--entretien-text);} .badge-Entretien::before  { background: var(--entretien-dot);}
 .badge-Refus      { background: var(--refus-bg);    color: var(--refus-text);    } .badge-Refus::before      { background: var(--refus-dot);    }
 .badge-En\ attente{ background: var(--attente-bg);  color: var(--attente-text);  } .badge-En\ attente::before{ background: var(--attente-dot);  }
+.badge-Stage      { background: var(--stage-bg);    color: var(--stage-text);    } .badge-Stage::before      { background: var(--stage-dot);    }
 .badge-Reportée   { background: var(--reportee-bg); color: var(--reportee-text); } .badge-Reportée::before   { background: var(--reportee-dot); }
 
 .empty-state {
@@ -1458,6 +1460,7 @@ tr:last-child td { border-bottom: none; }
   #screen-youth .badge-Envoyée    { background: var(--m-envoyee-bg);   color: var(--m-envoyee-text); }
   #screen-youth .badge-Relancée   { background: var(--relancee-dot);   color: #fff; }
   #screen-youth .badge-Entretien  { background: var(--m-entretien-bg); color: var(--m-entretien-text); }
+  #screen-youth .badge-Stage      { background: var(--stage-bg); color: var(--stage-text); }
   #screen-youth .badge-Reportée   { background: var(--reportee-dot);   color: #fff; }
   #screen-youth .badge-Refus      { background: var(--m-refus-bg);     color: var(--m-refus-text); }
   #screen-youth .badge::before { background: currentColor; opacity: 0.55; }
@@ -1569,6 +1572,10 @@ tr:last-child td { border-bottom: none; }
   display: flex; align-items: center; justify-content: space-between; min-height: 44px;
   font-family: 'Public Sans', sans-serif; font-size: 14px; color: var(--m-ink);
 }
+.mprofil-subs { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.25s var(--m-ease); }
+.mprofil-subs.open { grid-template-rows: 1fr; }
+.mprofil-subs-inner { overflow: hidden; min-height: 0; }
+@media (prefers-reduced-motion: reduce) { .mprofil-subs { transition: none; } }
 .mprofil-toggle-sub { padding-left: 18px; color: var(--m-ink-soft); font-size: 13px; }
 .mprofil-switch { position: relative; display: inline-block; width: 44px; height: 26px; flex-shrink: 0; }
 .mprofil-switch input { opacity: 0; width: 44px; height: 26px; margin: 0; cursor: pointer; position: absolute; z-index: 1; }
@@ -1587,6 +1594,70 @@ tr:last-child td { border-bottom: none; }
     transition: none !important;
   }
 }
+.remember-code{display:flex;align-items:center;gap:.6rem;margin:-.25rem 0 1rem;font-size:.9rem;color:var(--text-2,inherit);cursor:pointer}
+.remember-code input{width:1.1rem;height:1.1rem;accent-color:var(--accent)}
+.stage-overlay{position:fixed;inset:0;background:oklch(22% 0.01 80 / .45);display:none;align-items:center;justify-content:center;padding:16px;z-index:1200}
+.stage-overlay.open{display:flex}
+.stage-box{background:var(--m-surface,#fff);border-radius:16px;padding:22px;max-width:420px;width:100%;box-shadow:0 12px 40px oklch(22% 0.01 80 / .25)}
+.stage-box h2{font-size:18px;margin:0 0 6px}
+.stage-box p{font-size:14px;color:var(--text2);margin:0 0 14px;line-height:1.45}
+.stage-box input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font:inherit;margin-bottom:16px;box-sizing:border-box}
+.stage-actions{display:flex;gap:10px}.stage-actions button{flex:1}
+.stage-line{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px}
+.stage-line a{color:var(--stage-text);font-weight:600}
+.stage-todo{background:oklch(52% 0.19 27);color:oklch(98% 0.01 27);padding:3px 10px;border-radius:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.cand-card.stage-a-enregistrer,.bloc-card.stage-a-enregistrer,.kanban-card.stage-a-enregistrer,#screen-youth .cand-card.stage-a-enregistrer,#screen-youth .bloc-card.stage-a-enregistrer,#screen-youth .kanban-card.stage-a-enregistrer{border:2px solid oklch(52% 0.19 27);background:oklch(97% 0.02 27);box-shadow:none}
+.stage-done{background:var(--stage-bg);color:var(--stage-text);padding:2px 8px;border-radius:10px}
+.stage-doc{color:var(--stage-text);font-weight:600}
+.stage-hint{font-size:12px;color:var(--text2);margin:2px 0 6px}
+.stage-date-input{min-height:48px;font-size:16px !important;padding:10px 12px !important;border:2px solid var(--stage-dot) !important;border-radius:12px !important;background:var(--stage-bg) !important;color:var(--text);width:100%;box-sizing:border-box}
+.stage-rapport-btn{display:inline-block;background:oklch(55% 0.15 55);color:oklch(98% 0.01 55) !important;padding:6px 12px;border-radius:10px;font-weight:700;text-decoration:none}
+.stage-rapport-todo{background:oklch(55% 0.15 55);color:oklch(98% 0.01 55);padding:3px 10px;border-radius:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.cand-card.stage-rapport,.bloc-card.stage-rapport,.kanban-card.stage-rapport,#screen-youth .cand-card.stage-rapport,#screen-youth .bloc-card.stage-rapport,#screen-youth .kanban-card.stage-rapport{border:2px solid oklch(55% 0.15 55);background:oklch(96% 0.035 75);box-shadow:none}
+.stage-dates{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-bottom:16px}
+@media (min-width:420px){.stage-dates{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stage-dates label{min-width:0;font-size:12px;color:var(--text2);display:flex;flex-direction:column;gap:4px}
+.stage-dates input{display:block;width:100%;max-width:100%;min-width:0;padding:9px 10px;border:1.5px solid var(--border);border-radius:10px;font:inherit;box-sizing:border-box;-webkit-appearance:none;appearance:none;background:var(--bg)}
+#stage-field .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+#stage-field input[type=date]{min-width:0;max-width:100%;width:100%;box-sizing:border-box;-webkit-appearance:none;appearance:none}
+
+/* ── TUTORIEL ───────────────────────────────────────────────────────────────── */
+#tuto-intro{position:fixed;inset:0;z-index:3100;display:none;align-items:center;justify-content:center;padding:20px;background:var(--m-bg, oklch(96% 0.012 80))}
+#tuto-intro.show{display:flex}
+.tuto-card{width:100%;max-width:420px;display:flex;flex-direction:column;min-height:min(520px,86vh)}
+.tuto-skip{align-self:flex-end;background:none;border:none;color:var(--m-ink-soft, var(--text2));font:inherit;font-size:14px;padding:8px 4px;cursor:pointer}
+.tuto-body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:12px 4px}
+.tuto-step-num{font-family:'Space Grotesk','DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--m-accent, #3730A3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
+.tuto-title{font-family:'Space Grotesk','DM Sans',sans-serif;font-size:30px;line-height:1.15;font-weight:600;color:var(--m-ink, #2b2118);margin:0 0 14px}
+.tuto-text{font-size:17px;line-height:1.5;color:var(--m-ink, #2b2118);max-width:34ch;margin:0}
+.tuto-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:12px}
+.tuto-dots{display:flex;gap:8px}
+.tuto-dot{width:8px;height:8px;border-radius:50%;background:var(--m-border, #ddd)}
+.tuto-dot.on{background:var(--m-accent, #3730A3);width:22px;border-radius:8px}
+.tuto-next{background:var(--m-accent, #3730A3);color:oklch(98% 0.005 80);border:none;border-radius:14px;padding:14px 26px;font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+#coach{position:fixed;inset:0;z-index:3000;display:none}
+#coach.show{display:block;pointer-events:none}
+#coach .coach-block,#coach .coach-mask,#coach .coach-bubble{pointer-events:auto}
+#coach .coach-block{position:absolute;inset:0}
+#coach .coach-mask{position:fixed;display:none;background:transparent}
+#coach.interactif .coach-block{display:none}
+#coach.interactif .coach-mask{display:block}
+#coach .coach-text ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:5px}
+#coach .coach-text li{font-size:13px;line-height:1.35}
+#coach .coach-text li b{font-weight:700}
+#coach .coach-spot{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px oklch(22% 0.01 80 / .62);pointer-events:none;transition:all .28s cubic-bezier(0.16,1,0.3,1)}
+#coach .coach-bubble{position:fixed;width:min(320px,calc(100vw - 32px));background:oklch(99% 0.003 80);color:oklch(22% 0.01 80);border-radius:16px;padding:16px 16px 14px;box-shadow:0 10px 34px oklch(22% 0.01 80 / .3);transition:top .28s cubic-bezier(0.16,1,0.3,1),left .28s cubic-bezier(0.16,1,0.3,1)}
+#coach .coach-count{font-size:12px;font-weight:600;color:var(--m-accent, #3730A3);margin-bottom:6px}
+#coach .coach-text{font-size:15px;line-height:1.45;margin:0 0 14px}
+#coach .coach-next.cache{display:none}
+#coach .coach-bubble.compact{padding:10px 12px}
+#coach .coach-bubble.compact .coach-count{display:none}
+#coach .coach-bubble.compact .coach-text{font-size:14px;margin-bottom:8px}
+#coach .coach-actions{display:flex;justify-content:space-between;align-items:center;gap:10px}
+#coach .coach-skip{background:none;border:none;font:inherit;font-size:13px;color:oklch(52% 0.02 80);padding:6px 2px;cursor:pointer}
+#coach .coach-next{background:var(--m-accent, #3730A3);color:oklch(98% 0.005 80);border:none;border-radius:12px;padding:10px 18px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+@media (prefers-reduced-motion:reduce){#coach .coach-spot,#coach .coach-bubble{transition:none}}
+.mprofil-tuto-btn{width:100%;background:none;border:1.5px solid var(--m-border, #ddd);border-radius:14px;padding:12px;font:inherit;font-size:15px;color:var(--m-ink, #2b2118);cursor:pointer}
 </style>
 </head>
 <body>
@@ -1618,6 +1689,7 @@ tr:last-child td { border-bottom: none; }
           <input type="text" id="youth-code" name="username" placeholder="Ex : SED01" autocomplete="username" autocapitalize="characters"
             oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')loginYouth()">
         </div>
+        <label class="remember-code"><input type="checkbox" id="remember-code" checked> Retenir mon code sur cet appareil</label>
         <button class="btn-primary" id="btn-login-youth" onclick="loginYouth()">Accéder à mon suivi →</button>
       </div>
 
@@ -1891,6 +1963,7 @@ tr:last-child td { border-bottom: none; }
         <option value="Entretien">Entretiens</option>
         <option value="Refus">Refus</option>
                 <option value="Reportée">Reportées</option>
+        <option value="Stage">Stages décrochés</option>
       </select>
     </div>
     <div class="filter-bar" id="youth-type-filter-bar" style="margin-bottom:14px">
@@ -1947,10 +2020,6 @@ tr:last-child td { border-bottom: none; }
     </div>
 
     <div class="mprofil-section">
-      <button class="mprofil-export-btn" onclick="exportPDF('youth')">Exporter en PDF</button>
-    </div>
-
-    <div class="mprofil-section">
       <div class="mprofil-toggle-row">
         <span>Notifications activées</span>
         <label class="mprofil-switch">
@@ -1958,6 +2027,7 @@ tr:last-child td { border-bottom: none; }
           <span class="mprofil-switch-track"></span>
         </label>
       </div>
+      <div class="mprofil-subs" id="mprofil-notif-subs"><div class="mprofil-subs-inner">
       <div class="mprofil-toggle-row mprofil-toggle-sub">
         <span>Relances</span>
         <label class="mprofil-switch">
@@ -1972,6 +2042,23 @@ tr:last-child td { border-bottom: none; }
           <span class="mprofil-switch-track"></span>
         </label>
       </div>
+      <div class="mprofil-toggle-row mprofil-toggle-sub">
+        <span>Rapport de stage</span>
+        <label class="mprofil-switch">
+          <input type="checkbox" id="mprofil-notif-rapport" onchange="saveMobileNotifPrefs()">
+          <span class="mprofil-switch-track"></span>
+        </label>
+      </div>
+      </div></div>
+    </div>
+
+    <div class="mprofil-section">
+      <button class="mprofil-export-btn" onclick="exportPDF('youth')">Exporter en PDF</button>
+    </div>
+
+    <div class="mprofil-section">
+      <button class="mprofil-tuto-btn" onclick="tutoRestart()">Revoir le tutoriel</button>
+      <div id="mprofil-version" style="margin-top:14px;font-size:11px;color:var(--m-ink-soft);text-align:center"></div>
     </div>
   </div>
 </div>
@@ -2013,6 +2100,7 @@ tr:last-child td { border-bottom: none; }
         <button class="filter-btn" onclick="filterCounselor('Relancée', this)">Relancées</button>
         <button class="filter-btn" onclick="filterCounselor('Refus', this)">Refus</button>
                 <button class="filter-btn" onclick="filterCounselor('Reportée', this)">Reportées</button>
+        <button class="filter-btn" onclick="filterCounselor('Stage', this)">Stages</button>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <div style="display:flex;background:var(--surface2);border-radius:var(--radius);padding:3px;gap:2px">
@@ -2080,6 +2168,7 @@ tr:last-child td { border-bottom: none; }
           <option value="Entretien">Entretiens</option>
           <option value="Refus">Refus</option>
           <option value="Reportée">Reportées</option>
+          <option value="Stage">Stages décrochés</option>
         </select>
       </div>
       <div class="filter-bar" id="detail-type-filter-bar" style="margin-bottom:14px">
@@ -2120,6 +2209,7 @@ tr:last-child td { border-bottom: none; }
           onkeydown="handleMetierKey(event)"
           autocomplete="off">
         <div id="metier-error" style="display:none;font-size:12px;color:var(--refus-text);margin-top:4px">Ce métier n'est pas dans la liste. Sélectionnez une suggestion.</div>
+        <div id="metier-hint" style="display:none;font-size:12px;color:var(--text2);margin-top:4px"></div>
         <div id="metier-suggestions" class="autocomplete-list" style="display:none"></div>
       </div>
       <div class="field">
@@ -2134,7 +2224,19 @@ tr:last-child td { border-bottom: none; }
           <option>Entretien</option>
           <option>Refus</option>
           <option>Reportée</option>
+          <option>Stage</option>
         </select>
+      </div>
+      <div class="field" id="stage-field" style="display:none">
+        <div class="form-row">
+          <div class="field"><label>Premier jour du stage</label><input type="date" id="f-stage-debut" class="stage-date-input"></div>
+          <div class="field"><label>Dernier jour du stage</label><input type="date" id="f-stage-fin" class="stage-date-input"></div>
+        </div>
+        <div class="stage-hint">Touchez une case pour choisir une date.</div>
+        <label class="remember-code" style="margin:4px 0 6px"><input type="checkbox" id="f-stage-enreg"> Le formulaire d'enregistrement a été rempli</label>
+        <a class="stage-doc" href="https://www.ge.ch/document/28319/telecharger" target="_blank" rel="noopener">Ouvrir le formulaire d'enregistrement du stage</a>
+        <label class="remember-code" style="margin:14px 0 6px"><input type="checkbox" id="f-stage-rapport"> Le rapport de stage a été demandé</label>
+        <a class="stage-doc" href="https://www.ge.ch/document/28320/telecharger" target="_blank" rel="noopener">Ouvrir le rapport de stage</a>
       </div>
       <div class="field" id="rappel-field">
         <label>Me rappeler à partir du <span style="font-size:11px;color:var(--text3);font-weight:400">(optionnel)</span></label>
@@ -2257,6 +2359,48 @@ tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
+<div id="tuto-intro" role="dialog" aria-modal="true" aria-labelledby="tuto-title">
+  <div class="tuto-card">
+    <button class="tuto-skip" id="tuto-skip" onclick="tutoIntroEnd()">Passer</button>
+    <div class="tuto-body">
+      <div class="tuto-step-num" id="tuto-step-num"></div>
+      <h2 class="tuto-title" id="tuto-title"></h2>
+      <p class="tuto-text" id="tuto-text"></p>
+    </div>
+    <div class="tuto-foot">
+      <div class="tuto-dots" id="tuto-dots"></div>
+      <button class="tuto-next" id="tuto-next" onclick="tutoIntroNext()">Suivant</button>
+    </div>
+  </div>
+</div>
+<div id="coach" aria-live="polite">
+  <div class="coach-block" id="coach-block"></div>
+  <div class="coach-mask" id="coach-m-t"></div><div class="coach-mask" id="coach-m-b"></div><div class="coach-mask" id="coach-m-l"></div><div class="coach-mask" id="coach-m-r"></div>
+  <div class="coach-spot" id="coach-spot"></div>
+  <div class="coach-bubble" id="coach-bubble" role="dialog">
+    <div class="coach-count" id="coach-count"></div>
+    <div class="coach-text" id="coach-text"></div>
+    <div class="coach-actions">
+      <button class="coach-skip" onclick="coachStop(true)">Passer le tutoriel</button>
+      <button class="coach-next" id="coach-next" onclick="coachNext()">Suivant</button>
+    </div>
+  </div>
+</div>
+<div id="stage-overlay" class="stage-overlay" onclick="if(event.target===this)answerStage(null)">
+  <div class="stage-box" role="dialog" aria-labelledby="stage-q">
+    <h2 id="stage-q">Le formulaire d'enregistrement de stage a-t-il été rempli ?</h2>
+    <p>Formulaire : <a class="stage-doc" href="https://www.ge.ch/document/28319/telecharger" target="_blank" rel="noopener">ouvrir le formulaire</a></p>
+    <div class="stage-hint" style="margin-bottom:8px">Touchez une case pour choisir une date.</div>
+    <div class="stage-dates">
+      <label>Premier jour du stage<input type="date" id="stage-debut" class="stage-date-input"></label>
+      <label>Dernier jour du stage<input type="date" id="stage-fin" class="stage-date-input"></label>
+    </div>
+    <div class="stage-actions">
+      <button class="btn-secondary" onclick="answerStage(false)">Pas encore</button>
+      <button class="btn-primary" onclick="answerStage(true)">Oui, rempli</button>
+    </div>
+  </div>
+</div>
 <div id="toast" class="toast"></div>
 
 <!-- ══ NAVIGATION BAS DE PAGE (mobile) ═══════════════════════════════════════ -->
@@ -2332,6 +2476,7 @@ async function restoreSession() {
         const resFav = await fetch(gsUrl('check_code', '&code=' + encodeURIComponent(user)));
         const jsonFav = await resFav.json();
         youthFavoris = jsonFav.favoris ? jsonFav.favoris.split('|').filter(Boolean) : [];
+        youthTutoRemote = jsonFav.tuto || '';
         youthConseiller = jsonFav.conseiller || '';
         if (jsonFav.nom) document.getElementById('youth-header-code').textContent = jsonFav.nom;
       } catch(e) { youthFavoris = []; }
@@ -2720,7 +2865,8 @@ async function togglePushSubscription() {
         code: currentUser,
         subscription: JSON.stringify(sub),
         relances: String(getNotifPrefs().relances),
-        places: String(getNotifPrefs().places)
+        places: String(getNotifPrefs().places),
+        rapport: String(getNotifPrefs().rapport)
       })
     });
   } catch (err) {
@@ -2818,6 +2964,10 @@ async function gsRead() {
       nom_jeune: r.nom_jeune || '',
       date_ajout: r.date_ajout || '',
       date_rappel: parseSheetDate(r.date_rappel) || '',
+      stage_rapport: String(r.stage_rapport).toLowerCase() === 'oui' ? 'oui' : '',
+      stage_debut: parseSheetDate(r.stage_debut) || '',
+      stage_fin: parseSheetDate(r.stage_fin) || '',
+      stage_enregistre: (r.stage_enregistre === true || String(r.stage_enregistre).toLowerCase() === 'oui' || String(r.stage_enregistre).toLowerCase() === 'true') ? 'oui' : (r.stage_enregistre ? 'non' : ''),
     });
   });
   return data;
@@ -2840,6 +2990,7 @@ async function gsReadJeunes() {
 }
 
 async function gsAppend(item) {
+  if (isDemoId(item.id)) return;
   const row = {
     code_jeune: currentUser,
     nom_jeune: currentUser,
@@ -2856,12 +3007,17 @@ async function gsAppend(item) {
     conseiller: currentConseiller ? currentConseiller.code : youthConseiller,
     date_ajout: item.date_ajout || new Date().toISOString(),
     date_rappel: item.date_rappel || '',
+    stage_debut: item.stage_debut || '',
+    stage_fin: item.stage_fin || '',
+    stage_enregistre: item.stage_enregistre || '',
+    stage_rapport: item.stage_rapport || '',
   };
   const url = gsUrl('write', '&row=' + encodeURIComponent(JSON.stringify(row)));
   await fetch(url);
 }
 
 async function gsUpdate(item) {
+  if (isDemoId(item.id)) return;
   const row = {
     code_jeune: currentUser,
     nom_jeune: currentUser,
@@ -2876,12 +3032,17 @@ async function gsUpdate(item) {
     notes: item.notes,
     id: item.id,
     date_rappel: item.date_rappel || '',
+    stage_debut: item.stage_debut || '',
+    stage_fin: item.stage_fin || '',
+    stage_enregistre: item.stage_enregistre || '',
+    stage_rapport: item.stage_rapport || '',
   };
   const url = gsUrl('update', '&row=' + encodeURIComponent(JSON.stringify(row)));
   await fetch(url);
 }
 
 async function gsDelete(id, code) {
+  if (isDemoId(id)) return;
   const url = gsUrl('delete', '&id=' + id + '&code=' + code);
   await fetch(url);
 }
@@ -2893,6 +3054,24 @@ function switchTab(tab) {
   document.getElementById('tab-counselor').style.display = tab==='counselor' ? '' : 'none';
   document.getElementById('login-error').style.display = 'none';
 }
+
+function rememberYouthCode(code) {
+  try {
+    const cb = document.getElementById('remember-code');
+    if (cb && cb.checked) localStorage.setItem('cap_code_jeune', code);
+    else localStorage.removeItem('cap_code_jeune');
+  } catch(e) {}
+}
+function prefillYouthCode() {
+  try {
+    const c = localStorage.getItem('cap_code_jeune');
+    const inp = document.getElementById('youth-code');
+    if (c && inp && !inp.value) inp.value = c;
+    const cb = document.getElementById('remember-code');
+    if (cb) cb.checked = true;
+  } catch(e) {}
+}
+document.addEventListener('DOMContentLoaded', prefillYouthCode);
 
 async function loginYouth() {
   const code = document.getElementById('youth-code').value.trim().toUpperCase();
@@ -2909,11 +3088,13 @@ async function loginYouth() {
       btnLogin.disabled = false;
       return;
     }
+    rememberYouthCode(code);
     currentUser = code;
     currentRole = 'youth';
     document.getElementById('youth-header-code').textContent = json.nom ? json.nom : code;
     youthConseiller = json.conseiller || '';
     youthFavoris = json.favoris ? json.favoris.split('|').filter(Boolean) : [];
+    youthTutoRemote = json.tuto || '';
     favorisBannerDismissed = false;
     btnLogin.textContent = 'Chargement...';
     allData = await gsRead();
@@ -2974,11 +3155,13 @@ async function loginCounselor() {
 }
 
 function logout() {
+  youthTutoRemote = '';
   currentUser = null; currentRole = null; currentConseiller = null; youthConseiller = ''; allData = {}; youthFilter = 'all'; youthFavoris = []; alertesData = []; alertesPostulees = new Set(); favorisBannerDismissed = false; mobileOnlyRelances = false;
   alertesData = []; alertesPostulees = new Set();
   clearSession();
   showScreen('login');
   document.getElementById('youth-code').value = '';
+  prefillYouthCode();
   document.getElementById('counselor-pwd').value = '';
   // Nettoyer le paramètre URL sans recharger
   if (window.history && window.location.search) {
@@ -3023,6 +3206,7 @@ function showScreen(name) {
   document.getElementById('screen-'+name).classList.add('active');
   if (name !== 'loading') document.getElementById('login-error').style.display = 'none';
   updateMobileNav(name);
+  if (typeof tutoOnScreen === 'function' && ['dashboard','youth','alertes','profil'].indexOf(name) >= 0) setTimeout(() => tutoOnScreen(name), 300);
 }
 
 // ── NAVIGATION MOBILE (Dashboard / Mes candidatures / Annonces / Profil) ─────
@@ -3200,26 +3384,33 @@ function renderProfilMobile() {
 
   loadMobileNotifPrefs();
   updatePushButtonState();
+  const verEl = document.getElementById('mprofil-version');
+  if (verEl) verEl.textContent = libelleVersion();
 }
 
 // ── PRÉFÉRENCES NOTIFICATIONS (mobile) ───────────────────────────────────────
+// Les trois réglages (relances, nouvelles places, rapport de stage) n'apparaissent que si les notifications sont activées
 function setNotifSubTogglesDisabled(disabled) {
-  const relEl = document.getElementById('mprofil-notif-relances');
-  const placesEl = document.getElementById('mprofil-notif-places');
-  if (relEl) relEl.disabled = disabled;
-  if (placesEl) placesEl.disabled = disabled;
+  const subs = document.getElementById('mprofil-notif-subs');
+  if (subs) {
+    subs.classList.toggle('open', !disabled);
+    subs.setAttribute('aria-hidden', disabled ? 'true' : 'false');
+    if ('inert' in subs) subs.inert = !!disabled;
+  }
 }
 
 function loadMobileNotifPrefs() {
-  let prefs = { relances: true, places: true };
+  let prefs = { relances: true, places: true, rapport: true };
   try {
     const raw = localStorage.getItem('cap_notif_prefs');
     if (raw) prefs = Object.assign(prefs, JSON.parse(raw));
   } catch (e) {}
   const relEl = document.getElementById('mprofil-notif-relances');
   const placesEl = document.getElementById('mprofil-notif-places');
+  const rapEl = document.getElementById('mprofil-notif-rapport');
   if (relEl) relEl.checked = prefs.relances;
   if (placesEl) placesEl.checked = prefs.places;
+  if (rapEl) rapEl.checked = prefs.rapport;
   const mainEl = document.getElementById('mprofil-notif-main');
   setNotifSubTogglesDisabled(!(mainEl && mainEl.checked));
 }
@@ -3227,7 +3418,7 @@ function loadMobileNotifPrefs() {
 // Préférences de notification de cet appareil (relances / nouvelles places).
 // Valeurs par défaut : tout activé.
 function getNotifPrefs() {
-  let prefs = { relances: true, places: true };
+  let prefs = { relances: true, places: true, rapport: true };
   try {
     const raw = localStorage.getItem('cap_notif_prefs');
     if (raw) prefs = Object.assign(prefs, JSON.parse(raw));
@@ -3250,7 +3441,8 @@ async function syncPushPrefsToServer(prefs) {
         code: currentUser,
         endpoint: sub.endpoint,
         relances: String(prefs.relances),
-        places: String(prefs.places)
+        places: String(prefs.places),
+        rapport: String(prefs.rapport)
       })
     });
     let ok = true;
@@ -3262,7 +3454,8 @@ async function syncPushPrefsToServer(prefs) {
           code: currentUser,
           subscription: JSON.stringify(sub),
           relances: String(prefs.relances),
-          places: String(prefs.places)
+          places: String(prefs.places),
+          rapport: String(prefs.rapport)
         })
       });
     }
@@ -3272,12 +3465,19 @@ async function syncPushPrefsToServer(prefs) {
 function saveMobileNotifPrefs() {
   const relEl = document.getElementById('mprofil-notif-relances');
   const placesEl = document.getElementById('mprofil-notif-places');
-  const prefs = { relances: relEl ? relEl.checked : true, places: placesEl ? placesEl.checked : true };
+  const rapEl = document.getElementById('mprofil-notif-rapport');
+  const prefs = { relances: relEl ? relEl.checked : true, places: placesEl ? placesEl.checked : true, rapport: rapEl ? rapEl.checked : true };
   try { localStorage.setItem('cap_notif_prefs', JSON.stringify(prefs)); } catch (e) {}
   syncPushPrefsToServer(prefs);
 }
 
 async function toggleMainNotifMobile() {
+  const mainOn = document.getElementById('mprofil-notif-main');
+  // À l'activation, les trois réglages repartent tous activés
+  if (mainOn && mainOn.checked) {
+    try { localStorage.setItem('cap_notif_prefs', JSON.stringify({ relances: true, places: true, rapport: true })); } catch (e) {}
+    loadMobileNotifPrefs();
+  }
   await togglePushSubscription();
   await updatePushButtonState();
   const mainEl = document.getElementById('mprofil-notif-main');
@@ -3315,8 +3515,8 @@ function renderYouth() {
 
   // Tri : rappels échus > followup > date récente
   let sorted = [...items].sort((a,b) => {
-    const ar = needsRappel(a) ? 2 : needsFollowUp(a) ? 1 : 0;
-    const br = needsRappel(b) ? 2 : needsFollowUp(b) ? 1 : 0;
+    const ar = needsStageReg(a) ? 4 : needsRapportStage(a) ? 3 : needsRappel(a) ? 2 : needsFollowUp(a) ? 1 : 0;
+    const br = needsStageReg(b) ? 4 : needsRapportStage(b) ? 3 : needsRappel(b) ? 2 : needsFollowUp(b) ? 1 : 0;
     if (br !== ar) return br - ar;
     return new Date(b.date||0) - new Date(a.date||0);
   });
@@ -3366,7 +3566,7 @@ function renderList(list, items) {
     const followup = needsFollowUp(item);
     const rappel = needsRappel(item);
     const days = daysSince(item.date);
-    const cardClass = rappel ? ' rappel-due' : followup ? ' followup' : '';
+    const cardClass = needsStageReg(item) ? ' stage-a-enregistrer' : needsRapportStage(item) ? ' stage-rapport' : rappel ? ' rappel-due' : followup ? ' followup' : '';
     return '<div class="cand-card' + cardClass + '" onclick="openModal(\'' + item.id + '\')">'
       + '<div class="cand-top"><div>'
       + '<div class="cand-enterprise">' + item.entreprise + '</div>'
@@ -3376,6 +3576,7 @@ function renderList(list, items) {
       + '<span class="cand-date">' + (item.date ? formatDate(item.date) : 'Date non renseignée') + '</span>'
       + (item.contact ? '<span style="font-size:12px;color:var(--text3)">· ' + item.contact + '</span>' : '')
       + '</div>'
+      + stageLineHTML(item)
       + (rappel ? '<div class="rappel-banner">🔔 ' + rappelLabel(item) + '</div>' : '')
       + (followup && !rappel ? '<div class="followup-banner">⏰ Envoyée il y a ' + days + ' jours — pensez à relancer !</div>' : '')
       + (item.notes ? '<div style="font-size:12px;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">' + item.notes + '</div>' : '')
@@ -3387,7 +3588,7 @@ function renderBloc(list, items) {
   list.innerHTML = '<div class="bloc-grid">' + items.map(item => {
     const followup = needsFollowUp(item);
     const rappel = needsRappel(item);
-    const cardClass = rappel ? ' rappel-due' : followup ? ' followup' : '';
+    const cardClass = needsStageReg(item) ? ' stage-a-enregistrer' : needsRapportStage(item) ? ' stage-rapport' : rappel ? ' rappel-due' : followup ? ' followup' : '';
     return '<div class="bloc-card' + cardClass + '" onclick="openModal(\'' + item.id + '\')">'
       + '<span class="badge badge-' + item.statut + '" style="align-self:flex-start">' + item.statut + '</span>'
       + '<div class="bloc-enterprise">' + item.entreprise + '</div>'
@@ -3400,13 +3601,14 @@ function renderBloc(list, items) {
 }
 
 function renderKanban(list, items) {
-  const statuts = ['Envoyée', 'Relancée', 'Entretien', 'Refus', 'Reportée'];
+  const statuts = ['Envoyée', 'Relancée', 'Entretien', 'Stage', 'Refus', 'Reportée'];
   const colors = {
     'Envoyée':    {bg:'var(--envoyee-bg)',  text:'var(--envoyee-text)',  dot:'var(--envoyee-dot)'},
     'Relancée':   {bg:'var(--relancee-bg)', text:'var(--relancee-text)', dot:'var(--relancee-dot)'},
     'Entretien':  {bg:'var(--entretien-bg)',text:'var(--entretien-text)',dot:'var(--entretien-dot)'},
     'Refus':      {bg:'var(--refus-bg)',    text:'var(--refus-text)',    dot:'var(--refus-dot)'},
     'Reportée':   {bg:'var(--reportee-bg)', text:'var(--reportee-text)', dot:'var(--reportee-dot)'},
+    'Stage':      {bg:'var(--stage-bg)',    text:'var(--stage-text)',    dot:'var(--stage-dot)'},
   };
   const cols = statuts.map((statut, colIdx) => {
     const c = colors[statut];
@@ -3415,8 +3617,8 @@ function renderKanban(list, items) {
     const cards = items
       .filter(i => i.statut === statut)
       .sort((a, b) => {
-        const ar = needsRappel(a) ? 2 : needsFollowUp(a) ? 1 : 0;
-        const br = needsRappel(b) ? 2 : needsFollowUp(b) ? 1 : 0;
+        const ar = needsStageReg(a) ? 4 : needsRapportStage(a) ? 3 : needsRappel(a) ? 2 : needsFollowUp(a) ? 1 : 0;
+        const br = needsStageReg(b) ? 4 : needsRapportStage(b) ? 3 : needsRappel(b) ? 2 : needsFollowUp(b) ? 1 : 0;
         if (br !== ar) return br - ar;
         return new Date(b.date||0) - new Date(a.date||0);
       });
@@ -3426,7 +3628,7 @@ function renderKanban(list, items) {
           const followup = needsFollowUp(item);
           const rappel = needsRappel(item);
           const days = daysSince(item.date);
-          const cardClass = rappel ? ' rappel-due' : followup ? ' followup' : '';
+          const cardClass = needsStageReg(item) ? ' stage-a-enregistrer' : needsRapportStage(item) ? ' stage-rapport' : rappel ? ' rappel-due' : followup ? ' followup' : '';
 
           const tooltipRows = [];
           if (item.contact) tooltipRows.push('<div class="kt-row"><span class="kt-label">Contact</span><span class="kt-val">' + item.contact + '</span></div>');
@@ -3440,6 +3642,7 @@ function renderKanban(list, items) {
           return '<div class="kanban-card' + cardClass + '" data-id="' + item.id + '" onclick="openModal(\'' + item.id + '\')">'
             + '<div class="kanban-card-title">' + item.entreprise + '</div>'
             + '<div class="kanban-card-sub">' + item.metier + (item.type ? ' · ' + item.type : '') + '</div>'
+            + stageLineHTML(item)
             + (rappel ? '<div style="font-size:11px;color:var(--reportee-text);margin-top:4px">🔔 ' + rappelLabel(item) + '</div>' : '')
             + (followup && !rappel ? '<div style="font-size:11px;color:#92590A;margin-top:4px">⏰ ' + days + 'j sans réponse</div>' : '')
             + '<div class="kanban-card-date">' + (item.date ? formatDate(item.date) : '—') + '</div>'
@@ -3475,11 +3678,18 @@ function openModal(id) {
   document.getElementById('f-date').value = item?.date || todayISO();
   document.getElementById('f-statut').value = item?.statut || 'Envoyée';
   document.getElementById('f-date-rappel').value = item?.date_rappel || '';
+  document.getElementById('f-stage-debut').value = item?.stage_debut || '';
+  document.getElementById('f-stage-fin').value = item?.stage_fin || '';
+  document.getElementById('f-stage-enreg').checked = item?.stage_enregistre === 'oui';
+  document.getElementById('f-stage-rapport').checked = item?.stage_rapport === 'oui';
+  stageAsked = !!item && item.statut === 'Stage';
   onStatutChange(item?.statut || 'Envoyée');
   document.getElementById('f-contact').value = item?.contact || '';
   document.getElementById('f-tel').value = item?.telephone || '';
   document.getElementById('f-email').value = item?.email || '';
   document.getElementById('f-notes').value = item?.notes || '';
+  const metierHintEl = document.getElementById('metier-hint');
+  if (metierHintEl) metierHintEl.style.display = 'none';
 
   document.getElementById('modal-overlay').classList.add('open');
   const modalEl = document.querySelector('#modal-overlay .modal');
@@ -3490,10 +3700,14 @@ function openModal(id) {
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
   editingId = null;
+  newCandId = null;
   pendingAlertId = null; // annulation — l'alerte reste active
 }
 
+let savingCand = false;   // empêche un double enregistrement (double touche, réseau lent)
+let newCandId = null;     // identifiant conservé pour toute la durée de la fenêtre : un second envoi ne crée pas de doublon
 async function saveCandidature() {
+  if (savingCand) return;
   const type = document.getElementById('f-type').value;
   const enterprise = document.getElementById('f-enterprise').value.trim();
   const metier = document.getElementById('f-metier').value.trim();
@@ -3509,7 +3723,7 @@ async function saveCandidature() {
   if (!allData[currentUser]) allData[currentUser] = [];
 
   const item = {
-    id: editingId || genId(),
+    id: editingId || newCandId || (newCandId = (tutoDemo ? 'demo_' : '') + genId()),
     type: type,
     entreprise: enterprise,
     metier: metier,
@@ -3522,10 +3736,15 @@ async function saveCandidature() {
     telephone: document.getElementById('f-tel').value.trim(),
     email: document.getElementById('f-email').value.trim(),
     notes: document.getElementById('f-notes').value.trim(),
+    stage_debut: document.getElementById('f-statut').value === 'Stage' ? document.getElementById('f-stage-debut').value : '',
+    stage_fin: document.getElementById('f-statut').value === 'Stage' ? document.getElementById('f-stage-fin').value : '',
+    stage_enregistre: document.getElementById('f-statut').value === 'Stage' ? (document.getElementById('f-stage-enreg').checked ? 'oui' : 'non') : '',
+    stage_rapport: document.getElementById('f-statut').value === 'Stage' && document.getElementById('f-stage-rapport').checked ? 'oui' : '',
     date_ajout: editingId ? null : new Date().toISOString(),
   };
 
   const btnSave = document.getElementById('btn-save');
+  savingCand = true;
   btnSave.textContent = 'Enregistrement...';
   btnSave.disabled = true;
 
@@ -3539,7 +3758,9 @@ async function saveCandidature() {
       if (idx >= 0) allData[currentUser][idx] = item;
       await gsUpdate(item);
     } else {
-      allData[currentUser].push(item);
+      // Un nouvel essai après une erreur réutilise le même identifiant : on remplace au lieu d'ajouter
+      const dej = allData[currentUser].findIndex(i => i.id === item.id);
+      if (dej >= 0) allData[currentUser][dej] = item; else allData[currentUser].push(item);
       await gsAppend(item);
     }
     closeModal();
@@ -3566,6 +3787,7 @@ async function saveCandidature() {
   } catch(e) {
     toast('Erreur lors de la sauvegarde', true);
   }
+  savingCand = false;
   btnSave.textContent = 'Enregistrer';
   btnSave.disabled = false;
 }
@@ -4083,12 +4305,65 @@ function daysSince(iso) {
 function onStatutChange(val) {
   const field = document.getElementById('rappel-field');
   if (field) field.style.display = val === 'Reportée' ? 'block' : 'none';
+  const sf = document.getElementById('stage-field');
+  if (sf) sf.style.display = val === 'Stage' ? 'block' : 'none';
+  if (val === 'Stage' && !stageAsked && !tutoDemo) {
+    stageAsked = true;
+    askStage({ stage_debut: document.getElementById('f-stage-debut').value, stage_fin: document.getElementById('f-stage-fin').value }).then(r => {
+      if (!r) return;
+      document.getElementById('f-stage-debut').value = r.stage_debut;
+      document.getElementById('f-stage-fin').value = r.stage_fin;
+      document.getElementById('f-stage-enreg').checked = r.stage_enregistre === 'oui';
+    });
+  }
+  if (val !== 'Stage') stageAsked = false;
+}
+
+// ── ÉTAPE STAGE ──────────────────────────────────────────────────────────────
+let stageAsked = false;
+let stageResolver = null;
+const STAGE_RAPPORT_URL = 'https://www.ge.ch/document/28320/telecharger';
+function stageLineHTML(item) {
+  if (item.statut !== 'Stage') return '';
+  const aEnreg = item.stage_enregistre !== 'oui';
+  const dates = item.stage_debut || item.stage_fin
+    ? '<span>' + (item.stage_debut ? formatDate(item.stage_debut) : '?') + ' → ' + (item.stage_fin ? formatDate(item.stage_fin) : '?') + '</span>' : '';
+  const rapport = needsRapportStage(item);
+  return '<div class="stage-line">'
+    + (aEnreg ? '<span class="stage-todo">À enregistrer</span>' : '<span class="stage-done">Enregistré</span>')
+    + (rapport ? '<span class="stage-rapport-todo">Rapport de stage</span>' : '')
+    + dates + '</div>'
+    + (rapport ? '<div class="stage-line"><a class="stage-rapport-btn" href="' + STAGE_RAPPORT_URL + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ouvrir le rapport de stage</a></div>' : '');
+}
+function askStage(item) {
+  return new Promise(resolve => {
+    stageResolver = resolve;
+    document.getElementById('stage-debut').value = item.stage_debut || '';
+    document.getElementById('stage-fin').value = item.stage_fin || '';
+    document.getElementById('stage-overlay').classList.add('open');
+  });
+}
+function answerStage(valide) {
+  document.getElementById('stage-overlay').classList.remove('open');
+  const r = valide === null ? null : { stage_enregistre: valide ? 'oui' : 'non',
+    stage_debut: document.getElementById('stage-debut').value, stage_fin: document.getElementById('stage-fin').value };
+  const fn = stageResolver; stageResolver = null;
+  if (fn) fn(r);
 }
 
 function needsFollowUp(item) {
   if (!['Envoyée','Relancée'].includes(item.statut)) return false;
   const days = daysSince(item.date);
   return days !== null && days >= 10;
+}
+
+function needsRapportStage(item) {
+  if (item.statut !== 'Stage' || item.stage_rapport === 'oui' || !item.stage_fin) return false;
+  return String(item.stage_fin).slice(0,10) <= todayISO();
+}
+
+function needsStageReg(item) {
+  return item.statut === 'Stage' && item.stage_enregistre !== 'oui';
 }
 
 function needsRappel(item) {
@@ -4146,6 +4421,8 @@ let selectedSuggestionIdx = -1;
 function selectMetier(metier) {
   document.getElementById('f-metier').value = metier;
   document.getElementById('metier-error').style.display = 'none';
+  const hintEl = document.getElementById('metier-hint');
+  if (hintEl) hintEl.style.display = 'none';
   document.getElementById('metier-suggestions').style.display = 'none';
 }
 
@@ -4663,11 +4940,64 @@ function nettoyerMetierOrientation(metier) {
   return s;
 }
 
+// ── RAPPROCHEMENT D'UN TITRE D'ANNONCE ET DE LA LISTE DES MÉTIERS ────────────
+// Les titres des annonces (JobUp surtout) varient : « Cuisinier / Cuisinière CFC 2027 »,
+// « Apprenti·e employé·e de commerce », etc. On les compare mot à mot à la liste officielle.
+const METIER_MOTS_IGNORES = new Set(['de','du','des','la','le','les','en','et','au','aux','un','une','pour','dans','sur','avec','par','chez','dès','des','apprenti','apprentie','apprentis','apprentissage','formation','place','poste','h','f','m','w','x','d','l']);
+let METIER_INDEX = null;
+
+function normMetierTokens(str) {
+  let s = String(str || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  s = s.replace(/\([^)]*\)/g, ' ')               // spécialisations et (h/f)
+       .replace(/\s*[\/·•]\s*[a-z]+/g, ' ')       // /e, ·e, / cuisinière : forme féminine
+       .replace(/[’']/g, ' ')                     // d'entretien -> d entretien
+       .replace(/\b20\d\d\b/g, ' ')               // années
+       .replace(/[^a-z0-9 -]/g, ' ');
+  const niveau = (s.match(/\b(afp|cfc)\b/) || [])[1] || '';
+  s = s.replace(/\b(afp|cfc)\b/g, ' ');
+  const tokens = new Set();
+  s.split(/[\s-]+/).forEach(w => {
+    if (!w || METIER_MOTS_IGNORES.has(w) || w.length < 2) return;
+    // racine simplifiée, appliquée aussi à la liste : cuisiniere/cuisinier, employee/employe
+    w = w.replace(/iere$/, 'ier').replace(/ere$/, 'er').replace(/euse$/, 'eur').replace(/trice$/, 'teur').replace(/ienne$/, 'ien');
+    if (w.length > 5) w = w.replace(/e$/, '').replace(/s$/, '');
+    tokens.add(w);
+  });
+  return { tokens, niveau };
+}
+
+// Retourne { match: 'Métier CFC' | null, base: texte à proposer sinon }
+function resolveMetier(titre) {
+  const nettoye = nettoyerMetierOrientation(titre);
+  if (METIERS_SUISSE.includes(nettoye)) return { match: nettoye, base: nettoye };
+  if (!METIER_INDEX) {
+    METIER_INDEX = METIERS_SUISSE.map(m => Object.assign({ m }, normMetierTokens(m)));
+  }
+  const q = normMetierTokens(titre);
+  // Texte de repli : le titre sans niveau, sans année et sans parenthèses
+  const base = nettoye
+    .replace(/\s*[\/·•]\s*\S+/g, '')
+    .replace(/^(apprenti(e|s)?|apprentissage|poste de|place d['’]apprentissage)\s+/i, '')
+    .replace(/\b20\d\d\b/g, '').replace(/\b(AFP|CFC)\b/gi, '').replace(/\s+/g, ' ').trim();
+  if (!q.tokens.size) return { match: null, base };
+  let meilleurs = [], meilleurScore = 0;
+  METIER_INDEX.forEach(e => {
+    let communs = 0;
+    q.tokens.forEach(t => { if (e.tokens.has(t)) communs++; });
+    let score = (2 * communs) / (q.tokens.size + e.tokens.size);
+    if (q.niveau && e.niveau === q.niveau) score += 0.05;
+    if (score > meilleurScore + 1e-9) { meilleurScore = score; meilleurs = [e]; }
+    else if (Math.abs(score - meilleurScore) < 1e-9) meilleurs.push(e);
+  });
+  if (meilleurScore >= 0.6 && meilleurs.length === 1) return { match: meilleurs[0].m, base };
+  return { match: null, base };
+}
+
 function postulerDepuisAlerte(metier, entreprise, lieu, idAlerte) {
   // Mémoriser l'ID alerte — sauvegardé seulement si la candidature est enregistrée
   pendingAlertId = idAlerte || null;
   // Préremplir le formulaire et fermer les alertes
-  const metierNettoye = nettoyerMetierOrientation(metier);
+  const resolu = resolveMetier(metier);
   closeAlertes();
   openModal(null);
   // Attendre que le modal soit ouvert
@@ -4675,12 +5005,27 @@ function postulerDepuisAlerte(metier, entreprise, lieu, idAlerte) {
     const fEnterprise = document.getElementById('f-enterprise');
     const fMetier = document.getElementById('f-metier');
     const fNotes = document.getElementById('f-notes');
+    const hint = document.getElementById('metier-hint');
     if (fEnterprise) fEnterprise.value = entreprise;
     if (fMetier) {
-      fMetier.value = metierNettoye;
       document.getElementById('metier-error') && (document.getElementById('metier-error').style.display = 'none');
+      if (resolu.match) {
+        fMetier.value = resolu.match;
+        if (hint) hint.style.display = 'none';
+      } else {
+        // Pas de correspondance sûre : on propose les métiers proches et le jeune choisit
+        fMetier.value = resolu.base;
+        if (hint) {
+          hint.textContent = "Le métier de l'annonce n'a pas été reconnu avec certitude. Choisissez le plus proche dans la liste.";
+          hint.style.display = 'block';
+        }
+        showMetierSuggestions(resolu.base);
+      }
     }
-    if (fNotes && lieu) fNotes.value = lieu ? 'Lieu : ' + lieu : '';
+    const notes = [];
+    if (lieu) notes.push('Lieu : ' + lieu);
+    if (!resolu.match && metier) notes.push('Annonce : ' + metier);
+    if (fNotes && notes.length) fNotes.value = notes.join('\n');
     document.getElementById('f-type') && document.getElementById('f-type').focus();
   }, 150);
 }
@@ -4841,6 +5186,11 @@ async function moveKanbanCard(id, newStatut) {
 
   const oldStatut = item.statut;
   kanbanLastMove = { id, oldStatut, newStatut };
+  if (newStatut === 'Stage') {
+    const r = await askStage(item);
+    if (!r) { renderYouth(); return; }
+    item.stage_debut = r.stage_debut; item.stage_fin = r.stage_fin; item.stage_enregistre = r.stage_enregistre;
+  }
 
   // Mise à jour locale immédiate
   item.statut = newStatut;
@@ -5638,8 +5988,15 @@ function isMetierValid() {
 }
 
 
+const METIERS_EXEMPLES_TUTO = ['Employé de commerce CFC', 'Gestionnaire du commerce de détail CFC', 'Cuisinier CFC', 'Informaticien CFC'];
 function showMetierSuggestionsOnFocus() {
   const val = document.getElementById('f-metier').value;
+  if (tutoDemo && !youthFavoris.length) {
+    const list = document.getElementById('metier-suggestions');
+    list.innerHTML = METIERS_EXEMPLES_TUTO.map(m => '<div class="autocomplete-item" onmousedown="selectMetier(\'' + m + '\')">' + m + '</div>').join('');
+    list.style.display = 'block';
+    return;
+  }
   if (!val && youthFavoris.length > 0) {
     const list = document.getElementById('metier-suggestions');
     selectedSuggestionIdx = -1;
@@ -6114,31 +6471,98 @@ initPlaneScene({
 // ── MISE À JOUR DE L'APP ─────────────────────────────────────────────────────
 // Une app installée reste en mémoire : sans fermeture complète, elle ne recharge jamais.
 // On compare donc sa version (meta app-version) à celle du serveur, au lancement et au retour au premier plan.
-// Le niveau « major » (meta app-update-level du serveur) affiche l'écran de mise à jour ; « minor » ne fait rien.
+// Le niveau « major » (meta app-update-level du serveur) affiche l'écran de mise à jour (nouvelles fonctionnalités à expliquer) ;
+// « minor » recharge l'app automatiquement quand elle est au calme (voir tenterRechargementAuto).
+// La version et le résultat de la dernière vérification sont visibles en bas du profil (aide au diagnostic).
 const APP_VERSION = (document.querySelector('meta[name="app-version"]') || {}).content || '';
 let lastVersionCheck = 0;
 let updateScreenShown = false;
 
+// Lit le début du fichier publié sans le télécharger en entier (les balises meta sont dans le head)
+async function lireEnteteServeur() {
+  const ctrl = new AbortController();
+  const res = await fetch('./index.html?vcheck=' + Date.now(), { cache: 'no-store', signal: ctrl.signal });
+  if (!res.ok) throw new Error('http ' + res.status);
+  let txt = '';
+  if (res.body && res.body.getReader) {
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    while (txt.length < 16384 && !/app-update-level" content="[^"]+"/.test(txt)) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      txt += dec.decode(value, { stream: true });
+    }
+    ctrl.abort();
+  } else {
+    txt = (await res.text()).slice(0, 16384);
+  }
+  return txt;
+}
+
+function noterVerification(info) {
+  try { sessionStorage.setItem('cap_version_check', JSON.stringify(info)); } catch(e) {}
+  const el = document.getElementById('mprofil-version');
+  if (el) el.textContent = libelleVersion();
+}
+function libelleVersion() {
+  let txt = 'Version ' + (APP_VERSION || '?');
+  try {
+    const i = JSON.parse(sessionStorage.getItem('cap_version_check') || 'null');
+    if (i) txt += ' · vérifiée à ' + i.heure + (i.erreur ? ' (échec)' : ' (serveur : ' + i.serveur + ', ' + i.niveau + ')');
+  } catch(e) {}
+  return txt;
+}
+
 async function checkAppVersion(force) {
   if (updateScreenShown || !APP_VERSION || navigator.onLine === false) return;
   const now = Date.now();
-  if (!force && now - lastVersionCheck < 60000) return;
+  if (!force && now - lastVersionCheck < 20000) return;
   lastVersionCheck = now;
+  const heure = new Date().toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   try {
-    // Seul le début du fichier est utile (les balises meta sont dans le head)
-    const res = await fetch('./index.html?vcheck=' + now, { cache: 'no-store', headers: { Range: 'bytes=0-4095' } });
-    if (!res.ok) return;
-    const head = await res.text();
+    const head = await lireEnteteServeur();
     const remoteVersion = (head.match(/<meta name="app-version" content="([^"]+)"/) || [])[1];
     const level = (head.match(/<meta name="app-update-level" content="([^"]+)"/) || [])[1] || 'minor';
-    if (!remoteVersion) return;
+    if (!remoteVersion) { noterVerification({ heure, erreur: true }); return; }
+    noterVerification({ heure, serveur: remoteVersion, niveau: level });
     if (remoteVersion === APP_VERSION) {
       try { sessionStorage.removeItem('cap_update_tries'); } catch(e) {}
       return;
     }
     if (level === 'major') showUpdateScreen();
-  } catch(e) { /* silencieux : la vérification n'est jamais bloquante */ }
+    else { miseAJourEnAttente = remoteVersion; tenterRechargementAuto(); }
+  } catch(e) { noterVerification({ heure, erreur: true }); /* silencieux : la vérification n'est jamais bloquante */ }
 }
+
+// ── Mise à jour mineure : rechargement automatique quand l'app est au calme ──
+// Conditions : aucune fenêtre ouverte, aucun champ en cours de saisie, aucun tutoriel,
+// et aucune action du jeune depuis 30 secondes (ce qui inclut un retour dans l'app après une absence).
+let miseAJourEnAttente = null;
+let derniereAction = Date.now();
+['pointerdown', 'touchstart', 'keydown', 'scroll', 'click'].forEach(ev =>
+  window.addEventListener(ev, () => { derniereAction = Date.now(); }, { passive: true, capture: true })
+);
+function appAuCalme() {
+  if (document.hidden) return false;
+  if (Date.now() - derniereAction < 30000) return false;
+  if (typeof tutoActive !== 'undefined' && tutoActive) return false;
+  if (typeof savingCand !== 'undefined' && savingCand) return false;
+  const ouvert = sel => [...document.querySelectorAll(sel)].some(e => getComputedStyle(e).display !== 'none');
+  if (ouvert('.modal-overlay.open, .stage-overlay.open, #pdf-overlay, #update-screen.show, #tuto-intro.show, #coach.show')) return false;
+  const a = document.activeElement;
+  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return false;
+  return true;
+}
+function tenterRechargementAuto() {
+  if (!miseAJourEnAttente || !appAuCalme()) return;
+  // Un seul essai par version : si le serveur renvoyait encore l'ancienne page, on n'entre pas dans une boucle
+  const cle = 'cap_auto_reload_' + miseAJourEnAttente;
+  try {
+    if (sessionStorage.getItem(cle)) { miseAJourEnAttente = null; return; }
+    sessionStorage.setItem(cle, String(Date.now()));
+  } catch(e) {}
+  location.replace(location.pathname + '?maj=' + Date.now());
+}
+setInterval(tenterRechargementAuto, 5000);
 
 function showUpdateScreen() {
   updateScreenShown = true;
@@ -6157,25 +6581,374 @@ async function applyAppUpdate() {
     const tries = (parseInt(sessionStorage.getItem('cap_update_tries') || '0', 10) || 0) + 1;
     sessionStorage.setItem('cap_update_tries', String(tries));
   } catch(e) {}
+  // Adresse différente à chaque fois : contourne tout cache résiduel. La session (sessionStorage) est conservée.
+  let relance = false;
+  const recharger = () => { if (relance) return; relance = true; location.replace(location.pathname + '?maj=' + Date.now()); };
+  // Filet de sécurité : quoi qu'il arrive, la page se recharge au bout de 2,5 secondes au plus
+  setTimeout(recharger, 2500);
   try {
-    // On ne désinscrit jamais le service worker : cela supprimerait l'abonnement aux notifications
+    // On ne désinscrit jamais le service worker : cela supprimerait l'abonnement aux notifications.
+    // Ces opérations ne bloquent jamais le rechargement (la page est de toute façon demandée au réseau en priorité).
     if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.update().catch(() => {})));
+      navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => { try { r.update().catch(() => {}); } catch(e) {} })).catch(() => {});
     }
     if (window.caches) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
+      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).catch(() => {});
     }
   } catch(e) {}
-  // Adresse différente à chaque fois : contourne tout cache résiduel. La session (sessionStorage) est conservée.
-  location.replace(location.pathname + '?maj=' + Date.now());
+  // Un court délai laisse partir ces demandes, puis on recharge sans attendre leur fin
+  setTimeout(recharger, 300);
 }
 
 window.addEventListener('load', () => checkAppVersion(true));
 window.addEventListener('pageshow', (e) => { if (e.persisted) checkAppVersion(true); });
 window.addEventListener('online', () => checkAppVersion());
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkAppVersion(); });
+window.addEventListener('focus', () => checkAppVersion());
+// Une app laissée ouverte au premier plan : vérification régulière (toutes les 2 minutes)
+setInterval(() => { if (!document.hidden) checkAppVersion(); }, 120000);
+
+
+// ── TUTORIEL ─────────────────────────────────────────────────────────────────
+// Deux parties : (1) cartes d'introduction à la première ouverture ; (2) bulles sur les écrans
+// réels, dont un exercice guidé avec une candidature d'exemple (jamais envoyée au Sheet).
+// La progression est gardée sur l'appareil (localStorage), par code jeune. Chaque carte / écran
+// a un numéro de version `v` : après une grosse mise à jour, ajoutez une carte ou une étape avec
+// v supérieur et augmentez TUTO_VERSIONS.<écran> : seules les nouveautés seront montrées.
+const TUTO_INTRO = [
+  { v: 1, titre: 'Bienvenue sur votre suivi', texte: "Vous gardez ici la trace de toutes vos candidatures. Rien ne se perd, et vous restez maître de votre parcours." },
+  { v: 1, titre: 'Suivre vos candidatures', texte: "Ajoutez chaque candidature envoyée, puis changez son statut au fil des réponses. Après 10 jours sans nouvelles, l'app vous rappelle de relancer." },
+  { v: 1, titre: 'Trouver des places', texte: "Choisissez jusqu'à 3 métiers dans vos projets favoris. Les annonces qui correspondent apparaissent, et une candidature se prépare en un geste." },
+  { v: 1, titre: 'Rester prévenu', texte: "Activez les notifications dans votre profil : les relances et les nouvelles places arrivent directement sur votre téléphone." },
+];
+const TUTO_BULLES = {
+  dashboard: [
+    { v: 1, cible: '.mdash-grid', texte: "Voici votre dashboard, la page d'accueil. Les grandes cases sont des raccourcis : vos candidatures, vos relances et les annonces." },
+    { v: 1, cible: '#mdash-stats', texte: "Vos chiffres en un coup d'œil : candidatures envoyées, entretiens, reportées et refus." },
+    { v: 1, cible: '.mdash-tile-relances', texte: "Les relances : ce sont les candidatures restées sans réponse depuis 10 jours. C'est le bon moment pour relancer l'entreprise." },
+    { v: 1, cible: '#mobile-bottom-nav', texte: "Le menu du bas vous mène à vos candidatures, aux annonces et à votre profil. Passons aux candidatures.", bouton: 'Suivant' },
+  ],
+  alertes: [
+    { v: 1, cible: '.alertes-header', cibleAlt: '.alerte-card', cibleSans: '#alertes-body .empty-state', texteSans: "Tant que vous n'avez pas défini vos projets, il n'y a pas d'annonce. Une fois vos projets définis avec le bouton <b>Définir mes projets</b>, les annonces correspondantes apparaîtront sur cet écran.", pos: 'bas', bouton: 'Suivant', texte: "Les annonces apparaissent en fonction des projets favoris que vous avez définis dans votre profil. Touchez une annonce pour postuler : la candidature se prépare toute seule." },
+  ],
+  profil: [
+    { v: 1, cible: '#mprofil-favoris-list', pos: 'bas', texte: "Vos projets favoris : choisissez jusqu'à 3 métiers pour recevoir les annonces qui vous concernent." },
+    { v: 1, cible: '#mprofil-notif-main', pos: 'haut', texte: "Activez les notifications pour être prévenu des relances et des nouvelles places. Le tutoriel est terminé !", bouton: 'Terminer' },
+  ],
+};
+const TUTO_VERSIONS = { intro: 1, dashboard: 1, youth: 1, alertes: 1, profil: 1 };
+
+let tutoActive = false;
+let tutoDemo = false;          // l'exercice guidé est en cours
+let tutoIntroList = [], tutoIntroIdx = 0;
+let coachList = [], coachIdx = 0, coachScreen = '', coachOnEnd = null;
+
+function tutoKey() { return 'cap_tuto_' + currentUser; }
+// Progression : colonne « tuto » de l'onglet Jeunes (format « intro:1|dashboard:1 »), avec
+// copie locale en secours si le réseau lâche. Pour chaque rubrique, on garde la valeur la plus haute.
+let youthTutoRemote = '';
+function tutoParse(str) {
+  const o = {};
+  String(str || '').split('|').forEach(p => { const m = p.split(':'); if (m[0] && !isNaN(parseInt(m[1], 10))) o[m[0]] = parseInt(m[1], 10); });
+  return o;
+}
+function tutoSerialize(st) { return Object.keys(st).map(k => k + ':' + st[k]).join('|'); }
+function tutoLoad() {
+  let local = {};
+  try { local = JSON.parse(localStorage.getItem(tutoKey())) || {}; } catch(e) {}
+  const st = tutoParse(youthTutoRemote);
+  Object.keys(local).forEach(k => { st[k] = Math.max(st[k] || 0, local[k] || 0); });
+  return st;
+}
+function tutoSave(st) {
+  try { localStorage.setItem(tutoKey(), JSON.stringify(st)); } catch(e) {}
+  youthTutoRemote = tutoSerialize(st);
+  tutoSendRemote(youthTutoRemote);
+}
+function tutoSendRemote(val) {
+  if (!currentUser) return;
+  fetch(gsUrl('save_tuto', '&code=' + encodeURIComponent(currentUser) + '&tuto=' + encodeURIComponent(val))).catch(() => {});
+}
+function tutoMark(part) { const st = tutoLoad(); st[part] = TUTO_VERSIONS[part]; tutoSave(st); }
+function tutoRestart() {
+  try { localStorage.removeItem(tutoKey()); } catch(e) {}
+  youthTutoRemote = ''; tutoSendRemote('');
+  if (isMobileLayout()) showScreen('dashboard');
+  tutoActive = false;
+  setTimeout(() => tutoOnScreen(isMobileLayout() ? 'dashboard' : 'youth'), 150);
+}
+function isDemoId(id) { return String(id || '').indexOf('demo_') === 0; }
+
+// Appelé à chaque changement d'écran du jeune
+function tutoOnScreen(name) {
+  if (tutoActive || currentRole !== 'youth' || !currentUser) return;
+  if (document.getElementById('update-screen')?.classList.contains('show')) return;
+  if (document.getElementById('modal-overlay')?.classList.contains('open')) return;
+  const st = tutoLoad();
+  const dejaVu = st.intro || 0;
+  const aMontrer = TUTO_INTRO.filter(c => c.v > dejaVu);
+  if (aMontrer.length) { tutoIntroStart(aMontrer, name); return; }
+  if (!isMobileLayout()) return;
+  if (name === 'youth') {
+    if ((st.youth || 0) < TUTO_VERSIONS.youth) setTimeout(tutoDemoStart, 400);
+    return;
+  }
+  const liste = (TUTO_BULLES[name] || []).filter(b => b.v > (st[name] || 0));
+  if (liste.length) setTimeout(() => {
+    if (tutoActive) return;
+    // La cible de repli (ex. l'en-tête) sert si la cible préférée (ex. une annonce) n'existe pas
+    const finale = liste.map(b => {
+      if (b.cibleSans && !youthFavoris.length && document.querySelector(b.cibleSans)) return Object.assign({}, b, { cible: b.cibleSans, texte: b.texteSans });
+      return Object.assign({}, b, { cible: (b.cibleAlt && document.querySelector(b.cibleAlt)) ? b.cibleAlt : b.cible });
+    });
+    coachStart(finale, name, () => tutoNextScreen(name));
+  }, name === 'alertes' ? 1300 : 450);
+}
+
+// ── Cartes d'introduction ────────────────────────────────────────────────────
+function tutoIntroStart(liste, name) {
+  tutoActive = true; tutoIntroList = liste; tutoIntroIdx = 0;
+  tutoIntroAfter = name;
+  document.getElementById('tuto-intro').classList.add('show');
+  tutoIntroRender();
+}
+let tutoIntroAfter = '';
+function tutoIntroRender() {
+  const c = tutoIntroList[tutoIntroIdx], n = tutoIntroList.length;
+  document.getElementById('tuto-step-num').textContent = (tutoIntroIdx + 1) + ' sur ' + n;
+  document.getElementById('tuto-title').textContent = c.titre;
+  document.getElementById('tuto-text').textContent = c.texte;
+  document.getElementById('tuto-dots').innerHTML = tutoIntroList.map((_, i) => '<span class="tuto-dot' + (i === tutoIntroIdx ? ' on' : '') + '"></span>').join('');
+  const last = tutoIntroIdx === n - 1;
+  document.getElementById('tuto-next').textContent = last ? "C'est parti" : 'Suivant';
+  document.getElementById('tuto-skip').style.visibility = last ? 'hidden' : 'visible';
+}
+function tutoIntroNext() {
+  if (tutoIntroIdx < tutoIntroList.length - 1) { tutoIntroIdx++; tutoIntroRender(); }
+  else tutoIntroEnd();
+}
+function tutoIntroEnd() {
+  document.getElementById('tuto-intro').classList.remove('show');
+  tutoMark('intro');
+  tutoActive = false;
+  setTimeout(() => tutoOnScreen(tutoIntroAfter || 'dashboard'), 200);
+}
+
+// ── Bulles ───────────────────────────────────────────────────────────────────
+// Chaque étape : cible (sélecteur), texte (HTML autorisé, contenu fixe), bouton (libellé),
+// pos ('haut' | 'bas'), interactif (le jeune touche vraiment l'élément ; le reste est masqué),
+// extra (sélecteurs supplémentaires gardés cliquables), attend() (condition pour passer à la suite),
+// sansBouton (pas de bouton Suivant), avant() (préparation à l'affichage).
+let coachTimer = null;
+function coachStart(liste, screen, onEnd, forcer) {
+  const visibles = forcer ? liste : liste.filter(b => { const el = document.querySelector(b.cible); return el && (el.offsetParent !== null || getComputedStyle(el).position === 'fixed'); });
+  if (!visibles.length) { if (screen) tutoMark(screen); if (onEnd) onEnd(); return; }
+  tutoActive = true; coachList = visibles; coachIdx = 0; coachScreen = screen; coachOnEnd = onEnd || null;
+  document.getElementById('coach').classList.add('show');
+  coachRender();
+}
+function coachElRect(b) {
+  const el = document.querySelector(b.cible); if (!el) return null;
+  const r = el.getBoundingClientRect();
+  let top = r.top, left = r.left, right = r.right, bottom = r.bottom;
+  (b.extra || []).forEach(sel => {
+    const e = document.querySelector(sel);
+    if (e && e.offsetParent !== null && getComputedStyle(e).display !== 'none') {
+      const q = e.getBoundingClientRect();
+      top = Math.min(top, q.top); left = Math.min(left, q.left); right = Math.max(right, q.right); bottom = Math.max(bottom, q.bottom);
+    }
+  });
+  return { top, left, right, bottom, width: right - left, height: bottom - top };
+}
+function coachRender() {
+  clearInterval(coachTimer);
+  const b = coachList[coachIdx];
+  if (b.avant) { try { b.avant(); } catch(e) {} }
+  const el = document.querySelector(b.cible);
+  if (!el) { coachAdvance(); return; }
+  try { el.scrollIntoView({ block: 'center', behavior: 'instant' }); } catch(e) { el.scrollIntoView(); }
+  document.getElementById('coach').classList.toggle('interactif', !!b.interactif);
+  document.getElementById('coach-count').textContent = coachList.length > 1 ? (coachIdx + 1) + ' sur ' + coachList.length : '';
+  document.getElementById('coach-text').innerHTML = typeof b.texte === 'function' ? b.texte() : b.texte;
+  const nx = document.getElementById('coach-next');
+  nx.textContent = b.bouton || (coachIdx === coachList.length - 1 ? 'Terminer' : 'Suivant');
+  nx.classList.toggle('cache', !!b.sansBouton);
+  setTimeout(coachPlace, 60);
+  const idx = coachIdx;
+  coachStopFollow(); coachFollow(idx);
+  coachTimer = setInterval(() => {
+    if (coachIdx !== idx) return;
+    if (b.attend && b.attend()) { clearInterval(coachTimer); setTimeout(() => { if (coachIdx === idx && tutoActive) coachAdvance(); }, 350); }
+  }, 250);
+}
+let coachRaf = null;
+function coachFollow(idx) {
+  // Replace la surbrillance à chaque image : la liste des métiers, le clavier ou le défilement la déplacent
+  const boucle = () => {
+    if (coachIdx !== idx || !document.getElementById('coach').classList.contains('show')) { coachRaf = null; return; }
+    coachPlace();
+    coachRaf = requestAnimationFrame(boucle);
+  };
+  coachRaf = requestAnimationFrame(boucle);
+}
+function coachStopFollow() { if (coachRaf) cancelAnimationFrame(coachRaf); coachRaf = null; }
+let coachKbKey = '';
+function coachVisible() {
+  const vv = window.visualViewport;
+  const top = vv ? vv.offsetTop : 0, h = vv ? vv.height : window.innerHeight;
+  return { top, bottom: top + h, h, clavier: !!vv && vv.height < window.innerHeight * 0.8 };
+}
+function coachScroller() {
+  const m = document.querySelector('#modal-overlay.open .modal');
+  return m || null;
+}
+function coachPlace() {
+  const b = coachList[coachIdx]; if (!b) return;
+  let r = coachElRect(b); if (!r) return;
+  const pad = 6, vw = window.innerWidth, vh = window.innerHeight;
+  const vis = coachVisible();
+  const bub = document.getElementById('coach-bubble');
+  const compact = vis.clavier && !!b.interactif;
+  bub.classList.toggle('compact', compact);
+  const bh = bub.offsetHeight, bw = bub.offsetWidth;
+  // Clavier ouvert : la bulle reste en haut de la zone visible et on fait défiler l'écran
+  // pour que la case soit juste en dessous (une seule fois par changement de clavier).
+  if (compact) {
+    const cle = coachIdx + ':' + Math.round(vis.h);
+    if (cle !== coachKbKey) {
+      coachKbKey = cle;
+      const delta = r.top - (vis.top + bh + 24);
+      if (Math.abs(delta) > 6) {
+        const sc = coachScroller();
+        if (sc) sc.scrollTop += delta; else window.scrollBy(0, delta);
+        r = coachElRect(b) || r;
+      }
+    }
+  } else coachKbKey = '';
+  const spot = document.getElementById('coach-spot');
+  spot.style.transition = b.interactif ? 'none' : '';
+  const T = r.top - pad, L = r.left - pad, W = r.width + pad * 2, H = r.height + pad * 2;
+  spot.style.top = T + 'px'; spot.style.left = L + 'px'; spot.style.width = W + 'px'; spot.style.height = H + 'px';
+  const set = (id, t, l, w, h) => { const m = document.getElementById(id); m.style.top = t + 'px'; m.style.left = l + 'px'; m.style.width = Math.max(0, w) + 'px'; m.style.height = Math.max(0, h) + 'px'; };
+  set('coach-m-t', 0, 0, vw, Math.max(0, T));
+  set('coach-m-b', T + H, 0, vw, vh - (T + H));
+  set('coach-m-l', T, 0, Math.max(0, L), H);
+  set('coach-m-r', T, L + W, vw - (L + W), H);
+  const min = vis.top + 8, max = vis.bottom - 8;
+  let top;
+  if (compact) top = min;
+  else {
+    const placeBas = r.bottom + pad + 14 + bh <= max;
+    const placeHaut = r.top - pad - 14 - bh >= min;
+    const bas = b.pos === 'haut' ? !placeHaut : b.pos === 'bas' ? placeBas || !placeHaut : placeBas;
+    top = bas ? Math.min(r.bottom + pad + 14, max - bh) : Math.max(min, r.top - pad - 14 - bh);
+  }
+  const left = Math.min(Math.max(16, r.left + r.width / 2 - bw / 2), vw - bw - 16);
+  bub.style.top = top + 'px'; bub.style.left = left + 'px';
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => { if (document.getElementById('coach')?.classList.contains('show')) coachPlace(); });
+  window.visualViewport.addEventListener('scroll', () => { if (document.getElementById('coach')?.classList.contains('show')) coachPlace(); });
+}
+window.addEventListener('resize', () => { if (document.getElementById('coach')?.classList.contains('show')) coachPlace(); });
+function coachNext() {
+  const b = coachList[coachIdx];
+  if (b && b.action) { const a = b.action; b.action = null; try { a(); } catch(e) {} }
+  coachAdvance();
+}
+function coachAdvance() {
+  clearInterval(coachTimer); coachStopFollow();
+  if (coachIdx < coachList.length - 1) { coachIdx++; coachRender(); }
+  else coachStop(false);
+}
+function coachStop(passer) {
+  clearInterval(coachTimer); coachStopFollow();
+  const c = document.getElementById('coach'); c.classList.remove('show'); c.classList.remove('interactif');
+  tutoActive = false;
+  const fin = coachOnEnd; coachOnEnd = null;
+  if (tutoDemo) tutoDemoCleanup();
+  if (coachScreen) tutoMark(coachScreen);
+  if (fin && !passer) fin();
+}
+
+// Enchaînement automatique des écrans : dashboard, candidatures, annonces, profil
+function tutoPending(st, name) {
+  if (name === 'youth') return (st.youth || 0) < TUTO_VERSIONS.youth;
+  return (TUTO_BULLES[name] || []).some(b => b.v > (st[name] || 0));
+}
+function tutoNextScreen(current) {
+  const ordre = ['dashboard', 'youth', 'alertes', 'profil'];
+  const st = tutoLoad();
+  for (let i = ordre.indexOf(current) + 1; i < ordre.length; i++) {
+    if (tutoPending(st, ordre[i])) { goMobile(ordre[i]); return; }
+  }
+  if (current !== 'dashboard') goMobile('dashboard');
+}
+
+// ── Exercice guidé : une candidature d'exemple, jamais envoyée au Sheet ─────────
+// Le jeune touche vraiment les éléments ; le reste de l'écran est masqué.
+function tutoDemoStart() {
+  if (tutoActive || currentScreenName() !== 'youth') return;
+  tutoDemo = true;
+  const aDesFavoris = youthFavoris.length > 0;
+  const etapes = [
+    { v: 1, cible: '.mcand-fab-m', interactif: true, sansBouton: true, pos: 'haut',
+      texte: "Pour ajouter une candidature, touchez le bouton <b>+</b>. Nous allons en créer une d'exemple.",
+      attend: () => document.getElementById('modal-overlay').classList.contains('open') },
+    { v: 1, cible: '#f-type', interactif: true, sansBouton: true, pos: 'bas',
+      avant: () => tutoDemoPrefill(),
+      texte: "Choisissez d'abord le <b>type de demande</b> : <b>Stage</b> pour un stage, <b>Apprentissage</b> pour une place d'apprentissage.",
+      attend: () => document.getElementById('f-type').value !== '' },
+    { v: 1, cible: '#f-metier', interactif: true, sansBouton: true, pos: 'haut', extra: ['#metier-suggestions'],
+      avant: () => { const f = document.getElementById('f-metier'); f.setAttribute('inputmode', 'none'); f.setAttribute('readonly', 'readonly'); },
+      texte: aDesFavoris
+        ? "Touchez le champ <b>Métier</b> : vos métiers favoris apparaissent directement. Choisissez-en un."
+        : "Touchez le champ <b>Métier</b> : une liste d'exemples apparaît. Choisissez-en un. Pour une vraie candidature, vous taperez les premières lettres du métier.",
+      attend: () => METIERS_SUISSE.includes(document.getElementById('f-metier').value.trim()) },
+    { v: 1, cible: '#f-statut', interactif: true, pos: 'haut', bouton: 'Garder « Envoyée »',
+      avant: () => { const f = document.getElementById('f-metier'); f.removeAttribute('inputmode'); f.removeAttribute('readonly'); },
+      texte: "Choisissez le <b>statut</b>. Il se met à jour au fil des réponses :<ul>"
+        + "<li><b>Envoyée</b> : la candidature est partie, vous attendez une réponse.</li>"
+        + "<li><b>Relancée</b> : vous avez relancé l'entreprise.</li>"
+        + "<li><b>Entretien</b> : on vous a invité à un entretien.</li>"
+        + "<li><b>Refus</b> : la réponse est négative.</li>"
+        + "<li><b>Reportée</b> : l'entreprise vous demande de la contacter plus tard.</li>"
+        + "<li><b>Stage</b> : un stage est confirmé.</li></ul>",
+      attend: () => document.getElementById('f-statut').dataset.tutoTouched === '1' },
+    { v: 1, cible: '#btn-save', interactif: true, sansBouton: true,
+      texte: "C'est prêt. Touchez <b>Enregistrer</b>.",
+      attend: () => (allData[currentUser] || []).some(i => isDemoId(i.id)) },
+    { v: 1, cible: '.cand-card, .bloc-card, .kanban-card', pos: 'bas',
+      texte: "Voici votre candidature. Touchez une carte pour la modifier ou changer son statut quand vous recevez une réponse." },
+    { v: 1, cible: '.mcand-viewswitch-m', pos: 'bas', texte: "Ces boutons changent la présentation : liste, grille ou colonnes par statut." },
+    { v: 1, cible: '.mcand-fab-m', pos: 'haut', bouton: "Supprimer l'exemple",
+      texte: "C'est tout pour les candidatures. L'exemple va disparaître : à vous de jouer !" },
+  ];
+  coachStart(etapes, 'youth', () => tutoNextScreen('youth'), true);
+}
+function currentScreenName() {
+  const a = document.querySelector('.screen.active'); return a ? a.id.replace('screen-', '') : '';
+}
+function tutoDemoPrefill() {
+  document.getElementById('f-type').value = '';
+  document.getElementById('f-enterprise').value = 'Entreprise Exemple';
+  document.getElementById('f-metier').value = '';
+  document.getElementById('f-statut').value = 'Envoyée';
+  onStatutChange('Envoyée');
+  const st = document.getElementById('f-statut');
+  st.dataset.tutoTouched = '';
+  if (!st.dataset.tutoListen) { st.dataset.tutoListen = '1'; st.addEventListener('change', () => { st.dataset.tutoTouched = '1'; }); }
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+function tutoDemoCleanup() {
+  tutoDemo = false;
+  document.getElementById('f-metier').removeAttribute('inputmode');
+  document.getElementById('f-metier').removeAttribute('readonly');
+  document.getElementById('modal-overlay').classList.remove('open');
+  editingId = null; pendingAlertId = null;
+  if (allData[currentUser]) allData[currentUser] = allData[currentUser].filter(i => !isDemoId(i.id));
+  renderYouth(); renderDashboardMobile();
+}
 
 // ── SERVICE WORKER ────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
