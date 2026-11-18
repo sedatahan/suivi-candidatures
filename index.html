@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="app-version" content="2026.11.17-9">
-<meta name="app-update-level" content="major">
+<meta name="app-version" content="2026.11.18-2">
+<meta name="app-update-level" content="minor">
 <title>Suivi Candidatures</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1630,6 +1630,10 @@ tr:last-child td { border-bottom: none; }
 .tuto-step-num{font-family:'Space Grotesk','DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--m-accent, #3730A3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
 .tuto-title{font-family:'Space Grotesk','DM Sans',sans-serif;font-size:30px;line-height:1.15;font-weight:600;color:var(--m-ink, #2b2118);margin:0 0 14px}
 .tuto-text{font-size:17px;line-height:1.5;color:var(--m-ink, #2b2118);max-width:34ch;margin:0}
+.tuto-conseil{margin-top:22px;max-width:38ch}
+.tuto-conseil-label{font-family:'Space Grotesk','DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--m-accent, #3730A3);margin-bottom:6px}
+.tuto-conseil p{margin:0;font-size:15px;line-height:1.5;color:var(--m-ink-soft, var(--text2))}
+.tuto-conseil[hidden]{display:none}
 .tuto-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:12px}
 .tuto-dots{display:flex;gap:8px}
 .tuto-dot{width:8px;height:8px;border-radius:50%;background:var(--m-border, #ddd)}
@@ -2081,7 +2085,8 @@ tr:last-child td { border-bottom: none; }
     <div class="header-brand">Tableau de bord</div>
     <div class="header-user">
       <span class="header-badge" id="counselor-header-name">Conseiller</span>
-      <button class="btn-logout" onclick="refreshCounselor()" style="margin-right:6px" title="Rafraîchir">↻</button>
+      <button class="btn-logout" id="counselor-help-btn" onclick="tutoConseillerRestart()" style="margin-right:6px" title="Revoir le tutoriel" aria-label="Revoir le tutoriel">?</button>
+      <button class="btn-logout" id="counselor-refresh-btn" onclick="refreshCounselor()" style="margin-right:6px" title="Rafraîchir">↻</button>
       <button class="btn-logout" onclick="logout()">Quitter</button>
     </div>
   </div>
@@ -2366,6 +2371,10 @@ tr:last-child td { border-bottom: none; }
       <div class="tuto-step-num" id="tuto-step-num"></div>
       <h2 class="tuto-title" id="tuto-title"></h2>
       <p class="tuto-text" id="tuto-text"></p>
+      <div class="tuto-conseil" id="tuto-conseil" hidden>
+        <div class="tuto-conseil-label">Pour le présenter</div>
+        <p id="tuto-conseil-text"></p>
+      </div>
     </div>
     <div class="tuto-foot">
       <div class="tuto-dots" id="tuto-dots"></div>
@@ -2460,6 +2469,7 @@ async function restoreSession() {
       const conseiller = JSON.parse(sessionStorage.getItem('cap_conseiller'));
       if (!conseiller) return;
       currentConseiller = conseiller;
+      youthTutoRemote = conseiller.tuto || '';
       currentRole = 'counselor';
       document.getElementById('counselor-header-name').textContent = conseiller.nom;
       [allData, jeunesMap] = await Promise.all([gsRead(), gsReadJeunes()]);
@@ -3132,7 +3142,8 @@ async function loginCounselor() {
       btnC.disabled = false;
       return;
     }
-    currentConseiller = { code: json.code, nom: json.nom };
+    currentConseiller = { code: json.code, nom: json.nom, tuto: json.tuto || '' };
+    youthTutoRemote = currentConseiller.tuto;   // progression du tutoriel lue dans le Sheet
     currentRole = 'counselor';
     document.getElementById('counselor-header-name').textContent = json.nom;
     btnC.textContent = 'Chargement...';
@@ -3207,6 +3218,7 @@ function showScreen(name) {
   if (name !== 'loading') document.getElementById('login-error').style.display = 'none';
   updateMobileNav(name);
   if (typeof tutoOnScreen === 'function' && ['dashboard','youth','alertes','profil'].indexOf(name) >= 0) setTimeout(() => tutoOnScreen(name), 300);
+  if (name === 'counselor' && typeof tutoConseillerOnScreen === 'function') setTimeout(tutoConseillerOnScreen, 900);
 }
 
 // ── NAVIGATION MOBILE (Dashboard / Mes candidatures / Annonces / Profil) ─────
@@ -6636,14 +6648,105 @@ const TUTO_BULLES = {
     { v: 1, cible: '#mprofil-notif-main', pos: 'haut', texte: "Activez les notifications pour être prévenu des relances et des nouvelles places. Le tutoriel est terminé !", bouton: 'Terminer' },
   ],
 };
-const TUTO_VERSIONS = { intro: 1, dashboard: 1, youth: 1, alertes: 1, profil: 1 };
+const TUTO_VERSIONS = { intro: 1, dashboard: 1, youth: 1, alertes: 1, profil: 1, conseiller: 1 };
+
+
+// ── TUTORIEL CONSEILLER ──────────────────────────────────────────────────────
+// Bulles sur l'écran réel du tableau de bord (ordinateur et tablette). Progression gardée sur
+// l'appareil, par code conseiller (clé cap_tuto_cons_<CODE>). Pour ajouter une nouveauté : une étape
+// avec v supérieur et TUTO_VERSIONS.conseiller augmenté. Les étapes dont la cible n'existe pas
+// (aucun jeune, détail non ouvert) sont sautées automatiquement.
+// Cartes d'introduction : ce que le jeune peut faire, et comment le lui présenter (vouvoiement).
+const TUTO_CONSEILLER_CARTES = [
+  { v: 1, titre: 'Ce que vos jeunes peuvent faire',
+    texte: "Chaque jeune dispose d'un espace personnel, ouvert avec son code. Il y garde la trace de toutes ses candidatures, et vous les retrouvez sur votre tableau de bord.",
+    conseil: "Présentez-le comme son carnet de bord : il le tient à jour, vous le consultez. Il garde la main sur sa recherche." },
+  { v: 1, titre: 'Suivre ses candidatures',
+    texte: "Le jeune ajoute chaque candidature envoyée, puis change son statut au fil des réponses : envoyée, entretien, reportée, refus ou stage. Il peut aussi noter le contact et choisir une date de rappel.",
+    conseil: "Saisissez-en une ensemble lors d'un entretien. Une fois le geste vu, il le refait seul en quelques secondes." },
+  { v: 1, titre: 'Les relances',
+    texte: "Sans réponse depuis 10 jours, une candidature est signalée à relancer, dans l'app et par notification. Vous la voyez aussi sur votre tableau de bord.",
+    conseil: "Parlez de la relance comme d'un réflexe de professionnel, pas d'un contrôle. Le jeune décide s'il relance, et quand." },
+  { v: 1, titre: 'Projets favoris et annonces',
+    texte: "Le jeune choisit jusqu'à 3 métiers dans son profil. Les annonces qui correspondent apparaissent, et un geste suffit pour préparer la candidature.",
+    conseil: "Aidez-le à choisir ses métiers dès le premier entretien : sans projet défini, aucune annonce n'apparaît." },
+  { v: 1, titre: 'Les stages',
+    texte: "Quand une candidature passe en Stage, le jeune renseigne les dates et coche deux étapes : formulaire d'enregistrement rempli, rapport de stage demandé. Les liens vers les documents sont à portée de main.",
+    conseil: "Rappelez ces deux documents dès qu'un stage est décroché. L'app sert d'aide-mémoire, elle ne remplace pas Casenet." },
+  { v: 1, titre: 'Première connexion et notifications',
+    texte: "À sa première connexion, le jeune suit un tutoriel de quelques minutes. Dans son profil, il peut activer les notifications : relances, nouvelles places et rapport de stage, réglables séparément.",
+    conseil: "Remettez-lui son code personnel et conseillez d'activer les notifications dès le premier jour. Sur iPhone, l'app doit d'abord être ajoutée à l'écran d'accueil." },
+];
+const TUTO_CONSEILLER = [
+  { v: 1, cible: '#counselor-search', pos: 'bas',
+    texte: "Pour retrouver un jeune, tapez son prénom ou son code. La liste se filtre au fur et à mesure." },
+  { v: 1, cible: '#filter-bar', pos: 'bas',
+    texte: "Ces filtres gardent les jeunes qui ont au moins une candidature avec le statut choisi. <b>Stages</b> regroupe ceux qui ont décroché un stage." },
+  { v: 1, cible: '#counselor-grid .youth-card.followup', cibleAlt: '#counselor-grid .youth-card', pos: 'bas',
+    texte: "Chaque carte est un jeune, avec son nombre de candidatures par statut.<ul>"
+      + "<li><b>⏰ à relancer</b> : candidatures sans réponse depuis 10 jours.</li>"
+      + "<li><b>Point rouge</b> : nouvelles candidatures depuis votre dernière visite.</li></ul>" },
+  { v: 1, cible: '#cv-btn-grid', extra: ['#cv-btn-list'], pos: 'bas',
+    texte: "Passez de la grille à la liste. Le chiffre est le nombre de jeunes affichés." },
+  { v: 1, cible: '#counselor-grid .youth-card.followup', cibleAlt: '#counselor-grid .youth-card', interactif: true, pos: 'bas', bouton: 'Passer cette étape',
+    attend: () => !!document.querySelector('#counselor-grid .detail-panel-inline'),
+    texte: "Touchez cette carte pour ouvrir le détail du jeune. L'ouverture le marque comme vu : ses nouvelles candidatures ne sont plus signalées." },
+  { v: 1, cible: '.detail-panel-inline .detail-header-actions', pos: 'bas',
+    texte: "<b>Stats</b> ouvre ses statistiques, <b>PDF</b> exporte son tableau, <b>Archiver</b> le retire de la liste (récupérable depuis les archives)." },
+  { v: 1, cible: '.detail-panel-inline #detail-statut-select', extra: ['.detail-panel-inline #detail-type-filter-bar'], pos: 'bas',
+    texte: "Affinez le tableau par statut, puis par type : stage ou apprentissage." },
+  { v: 1, cible: '.detail-panel-inline #detail-tbody tr', pos: 'haut',
+    texte: "Une ligne par candidature.<ul>"
+      + "<li><b>Ligne jaune</b> : à relancer, avec le nombre de jours.</li>"
+      + "<li><b>Nouveau</b> : ajoutée depuis votre dernière visite.</li>"
+      + "<li><b>🔔 Rappel</b> : date de relance choisie par le jeune pour une candidature reportée.</li></ul>" },
+  { v: 1, cible: '#screen-counselor .btn-add', pos: 'bas',
+    texte: "Pour créer un profil : prénom et initiale du nom. Un code personnel est généré, modifiable, à transmettre au jeune pour sa première connexion." },
+  { v: 1, cible: '#btn-show-archives', pos: 'bas',
+    texte: "Les profils archivés. Un jeune archivé peut être désarchivé, ou supprimé définitivement." },
+  { v: 1, cible: '#counselor-refresh-btn', extra: ['#counselor-help-btn'], pos: 'bas', bouton: 'Terminer',
+    texte: "<b>↻</b> recharge les données du Sheet. <b>?</b> relance ce tutoriel quand vous voulez." },
+];
+
+function tutoConseillerOnScreen() {
+  if (tutoActive || currentRole !== 'counselor' || !currentConseiller) return;
+  if (document.getElementById('update-screen')?.classList.contains('show')) return;
+  if (document.querySelector('.modal-overlay.open')) return;
+  if (window.innerWidth < 700) return;                       // pensé pour ordinateur et tablette
+  const st = tutoLoad();
+  if ((st.conseiller || 0) >= TUTO_VERSIONS.conseiller) return;
+  tutoConseillerStart();
+}
+function tutoConseillerStart() {
+  if (tutoActive) return;
+  const st = tutoLoad();
+  // La cible préférée (carte avec le badge « à relancer ») sert si elle existe, sinon la cible de repli
+  const liste = TUTO_CONSEILLER.filter(b => b.v > (st.conseiller || 0))
+    .map(b => Object.assign({}, b, { cible: (b.cibleAlt && !document.querySelector(b.cible)) ? b.cibleAlt : b.cible }));
+  const cartes = TUTO_CONSEILLER_CARTES.filter(c => c.v > (st.conseiller || 0));
+  const bulles = () => {
+    if (!liste.length) { tutoMark('conseiller'); return; }
+    coachStart(liste, 'conseiller', () => { if (currentDetailCode) { try { closeDetail(); } catch(e) {} } }, true);
+  };
+  // D'abord les cartes « ce que vos jeunes peuvent faire », puis la visite de l'écran
+  if (cartes.length) tutoIntroStart(cartes, 'conseiller', bulles);
+  else bulles();
+}
+function tutoConseillerRestart() {
+  if (tutoActive) return;
+  if (window.innerWidth < 700) { toast("Le tutoriel est prévu pour un écran large (ordinateur ou tablette).", true); return; }
+  try { localStorage.removeItem(tutoKey()); } catch(e) {}
+  youthTutoRemote = '';
+  tutoSendRemote('');                                         // remet aussi la progression à zéro dans le Sheet
+  tutoConseillerStart();
+}
 
 let tutoActive = false;
 let tutoDemo = false;          // l'exercice guidé est en cours
 let tutoIntroList = [], tutoIntroIdx = 0;
 let coachList = [], coachIdx = 0, coachScreen = '', coachOnEnd = null;
 
-function tutoKey() { return 'cap_tuto_' + currentUser; }
+function tutoKey() { return (currentRole === 'counselor' && currentConseiller) ? 'cap_tuto_cons_' + currentConseiller.code : 'cap_tuto_' + currentUser; }
 // Progression : colonne « tuto » de l'onglet Jeunes (format « intro:1|dashboard:1 »), avec
 // copie locale en secours si le réseau lâche. Pour chaque rubrique, on garde la valeur la plus haute.
 let youthTutoRemote = '';
@@ -6666,6 +6769,13 @@ function tutoSave(st) {
   tutoSendRemote(youthTutoRemote);
 }
 function tutoSendRemote(val) {
+  // Conseiller : colonne « tuto » de l'onglet Conseillers. Jeune : colonne « tuto » de l'onglet Jeunes.
+  if (currentRole === 'counselor' && currentConseiller) {
+    currentConseiller.tuto = val;
+    try { saveSession(); } catch(e) {}
+    fetch(gsUrl('save_tuto', '&role=conseiller&code=' + encodeURIComponent(currentConseiller.code) + '&tuto=' + encodeURIComponent(val))).catch(() => {});
+    return;
+  }
   if (!currentUser) return;
   fetch(gsUrl('save_tuto', '&code=' + encodeURIComponent(currentUser) + '&tuto=' + encodeURIComponent(val))).catch(() => {});
 }
@@ -6706,9 +6816,10 @@ function tutoOnScreen(name) {
 }
 
 // ── Cartes d'introduction ────────────────────────────────────────────────────
-function tutoIntroStart(liste, name) {
+let tutoIntroOnEnd = null;
+function tutoIntroStart(liste, name, onEnd) {
   tutoActive = true; tutoIntroList = liste; tutoIntroIdx = 0;
-  tutoIntroAfter = name;
+  tutoIntroAfter = name; tutoIntroOnEnd = onEnd || null;
   document.getElementById('tuto-intro').classList.add('show');
   tutoIntroRender();
 }
@@ -6718,6 +6829,9 @@ function tutoIntroRender() {
   document.getElementById('tuto-step-num').textContent = (tutoIntroIdx + 1) + ' sur ' + n;
   document.getElementById('tuto-title').textContent = c.titre;
   document.getElementById('tuto-text').textContent = c.texte;
+  const cons = document.getElementById('tuto-conseil');
+  cons.hidden = !c.conseil;
+  document.getElementById('tuto-conseil-text').textContent = c.conseil || '';
   document.getElementById('tuto-dots').innerHTML = tutoIntroList.map((_, i) => '<span class="tuto-dot' + (i === tutoIntroIdx ? ' on' : '') + '"></span>').join('');
   const last = tutoIntroIdx === n - 1;
   document.getElementById('tuto-next').textContent = last ? "C'est parti" : 'Suivant';
@@ -6729,8 +6843,10 @@ function tutoIntroNext() {
 }
 function tutoIntroEnd() {
   document.getElementById('tuto-intro').classList.remove('show');
-  tutoMark('intro');
   tutoActive = false;
+  // Cartes du tutoriel conseiller : on enchaîne avec les bulles, sans toucher à la progression des jeunes
+  if (tutoIntroOnEnd) { const f = tutoIntroOnEnd; tutoIntroOnEnd = null; setTimeout(f, 200); return; }
+  tutoMark('intro');
   setTimeout(() => tutoOnScreen(tutoIntroAfter || 'dashboard'), 200);
 }
 
@@ -6768,7 +6884,7 @@ function coachRender() {
   if (!el) { coachAdvance(); return; }
   try { el.scrollIntoView({ block: 'center', behavior: 'instant' }); } catch(e) { el.scrollIntoView(); }
   document.getElementById('coach').classList.toggle('interactif', !!b.interactif);
-  document.getElementById('coach-count').textContent = coachList.length > 1 ? (coachIdx + 1) + ' sur ' + coachList.length : '';
+  document.getElementById('coach-count').textContent = (coachList.length > 1 && coachScreen !== 'conseiller') ? (coachIdx + 1) + ' sur ' + coachList.length : '';
   document.getElementById('coach-text').innerHTML = typeof b.texte === 'function' ? b.texte() : b.texte;
   const nx = document.getElementById('coach-next');
   nx.textContent = b.bouton || (coachIdx === coachList.length - 1 ? 'Terminer' : 'Suivant');
