@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="app-version" content="2026.11.18-2">
+<meta name="app-version" content="2026.11.18-3">
 <meta name="app-update-level" content="minor">
 <title>Suivi Candidatures</title>
 <meta name="mobile-web-app-capable" content="yes">
@@ -3998,7 +3998,7 @@ function showDetail(code) {
 
   // Charger les favoris
   renderDetailFavoris([]);
-  fetch(gsUrl('check_code', '&code=' + encodeURIComponent(code)))
+  if (code.indexOf('DEMO-') !== 0) fetch(gsUrl('check_code', '&code=' + encodeURIComponent(code)))
     .then(r => r.json())
     .then(json => {
       const favs = json.favoris ? json.favoris.split('|').filter(Boolean) : [];
@@ -4552,6 +4552,7 @@ let lastSeenMap = {}; // code -> ISO timestamp depuis le Sheet
 
 async function markAsSeenSheet(code) {
   lastSeenMap[code] = new Date().toISOString();
+  if (code.indexOf('DEMO-') === 0) return;   // jeune d'exemple du tutoriel : rien n'est écrit dans le Sheet
   try {
     await fetch(gsUrl('mark_as_read', '&code=' + encodeURIComponent(code)));
   } catch(e) {}
@@ -6672,7 +6673,7 @@ const TUTO_CONSEILLER_CARTES = [
     conseil: "Aidez-le à choisir ses métiers dès le premier entretien : sans projet défini, aucune annonce n'apparaît." },
   { v: 1, titre: 'Les stages',
     texte: "Quand une candidature passe en Stage, le jeune renseigne les dates et coche deux étapes : formulaire d'enregistrement rempli, rapport de stage demandé. Les liens vers les documents sont à portée de main.",
-    conseil: "Rappelez ces deux documents dès qu'un stage est décroché. L'app sert d'aide-mémoire, elle ne remplace pas Casenet." },
+    conseil: "Rappelez ces deux documents dès qu'un stage est décroché. L'app sert d'aide-mémoire pour le jeune." },
   { v: 1, titre: 'Première connexion et notifications',
     texte: "À sa première connexion, le jeune suit un tutoriel de quelques minutes. Dans son profil, il peut activer les notifications : relances, nouvelles places et rapport de stage, réglables séparément.",
     conseil: "Remettez-lui son code personnel et conseillez d'activer les notifications dès le premier jour. Sur iPhone, l'app doit d'abord être ajoutée à l'écran d'accueil." },
@@ -6700,13 +6701,47 @@ const TUTO_CONSEILLER = [
       + "<li><b>Ligne jaune</b> : à relancer, avec le nombre de jours.</li>"
       + "<li><b>Nouveau</b> : ajoutée depuis votre dernière visite.</li>"
       + "<li><b>🔔 Rappel</b> : date de relance choisie par le jeune pour une candidature reportée.</li></ul>" },
-  { v: 1, cible: '#screen-counselor .btn-add', pos: 'bas',
-    texte: "Pour créer un profil : prénom et initiale du nom. Un code personnel est généré, modifiable, à transmettre au jeune pour sa première connexion." },
   { v: 1, cible: '#btn-show-archives', pos: 'bas',
     texte: "Les profils archivés. Un jeune archivé peut être désarchivé, ou supprimé définitivement." },
-  { v: 1, cible: '#counselor-refresh-btn', extra: ['#counselor-help-btn'], pos: 'bas', bouton: 'Terminer',
-    texte: "<b>↻</b> recharge les données du Sheet. <b>?</b> relance ce tutoriel quand vous voulez." },
+  { v: 1, cible: '#counselor-refresh-btn', extra: ['#counselor-help-btn'], pos: 'bas',
+    texte: "<b>↻</b> rafraîchit la page. <b>?</b> relance ce tutoriel quand vous voulez." },
+  { v: 1, cible: '#screen-counselor .btn-add', pos: 'bas', bouton: 'Terminer',
+    texte: () => (tutoConsDemo ? "<b>Ajoutez votre premier jeune.</b> Les jeunes d'exemple disparaissent à la fin du tutoriel. " : "<b>Ajoutez un jeune.</b> ")
+      + "Indiquez son prénom et l'initiale de son nom : un code personnel est généré, modifiable, à lui transmettre pour sa première connexion." },
 ];
+
+// Jeunes d'exemple : montrés uniquement si le dossier du conseiller est vide (première connexion).
+// Ils n'existent qu'en mémoire : aucune écriture dans le Sheet, supprimés à la fin du tutoriel.
+let tutoConsDemo = false;
+function tutoConsDemoStart() {
+  tutoConsDemo = true;
+  const jour = n => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  const cand = (id, nom, type, entreprise, metier, statut, jours, extra) => Object.assign({
+    id: 'demo_' + id, type, entreprise, metier, date: jour(jours), statut, contact: '', telephone: '', email: '',
+    notes: '', nom_jeune: nom, date_ajout: jour(jours), date_rappel: '', stage_rapport: '', stage_debut: '', stage_fin: '', stage_enregistre: ''
+  }, extra || {});
+  jeunesMap['DEMO-A'] = 'Léa Exemple';
+  jeunesMap['DEMO-B'] = 'Noah Exemple';
+  allData['DEMO-A'] = [
+    cand('a1', 'Léa Exemple', 'Apprentissage', "Entreprise d'exemple SA", 'Employé de commerce CFC', 'Envoyée', 14),
+    cand('a2', 'Léa Exemple', 'Apprentissage', 'Banque Exemple', 'Employé de commerce CFC', 'Entretien', 3),
+    cand('a3', 'Léa Exemple', 'Stage', 'Cabinet Exemple', 'Assistant de bureau AFP', 'Reportée', 6, { date_rappel: jour(1) }),
+  ];
+  allData['DEMO-B'] = [
+    cand('b1', 'Noah Exemple', 'Apprentissage', 'Garage Exemple', 'Mécanicien automobile CFC', 'Refus', 9),
+    cand('b2', 'Noah Exemple', 'Stage', 'Atelier Exemple', 'Mécanicien automobile CFC', 'Envoyée', 2),
+  ];
+  renderCounselor();
+}
+function tutoConsDemoCleanup() {
+  if (!tutoConsDemo) return;
+  tutoConsDemo = false;
+  try { closeDetail(); } catch(e) {}
+  Object.keys(jeunesMap).forEach(c => { if (c.indexOf('DEMO-') === 0) delete jeunesMap[c]; });
+  Object.keys(allData).forEach(c => { if (c.indexOf('DEMO-') === 0) delete allData[c]; });
+  Object.keys(lastSeenMap).forEach(c => { if (c.indexOf('DEMO-') === 0) delete lastSeenMap[c]; });
+  renderCounselor();
+}
 
 function tutoConseillerOnScreen() {
   if (tutoActive || currentRole !== 'counselor' || !currentConseiller) return;
@@ -6720,12 +6755,14 @@ function tutoConseillerOnScreen() {
 function tutoConseillerStart() {
   if (tutoActive) return;
   const st = tutoLoad();
-  // La cible préférée (carte avec le badge « à relancer ») sert si elle existe, sinon la cible de repli
-  const liste = TUTO_CONSEILLER.filter(b => b.v > (st.conseiller || 0))
-    .map(b => Object.assign({}, b, { cible: (b.cibleAlt && !document.querySelector(b.cible)) ? b.cibleAlt : b.cible }));
   const cartes = TUTO_CONSEILLER_CARTES.filter(c => c.v > (st.conseiller || 0));
   const bulles = () => {
-    if (!liste.length) { tutoMark('conseiller'); return; }
+    // Dossier vide (première connexion) : deux jeunes d'exemple pour avoir quelque chose à montrer
+    if (!Object.keys(jeunesMap).length) tutoConsDemoStart();
+    // La cible préférée (carte avec le badge « à relancer ») sert si elle existe, sinon la cible de repli
+    const liste = TUTO_CONSEILLER.filter(b => b.v > (st.conseiller || 0))
+      .map(b => Object.assign({}, b, { cible: (b.cibleAlt && !document.querySelector(b.cible)) ? b.cibleAlt : b.cible }));
+    if (!liste.length) { tutoConsDemoCleanup(); tutoMark('conseiller'); return; }
     coachStart(liste, 'conseiller', () => { if (currentDetailCode) { try { closeDetail(); } catch(e) {} } }, true);
   };
   // D'abord les cartes « ce que vos jeunes peuvent faire », puis la visite de l'écran
@@ -6983,6 +7020,7 @@ function coachStop(passer) {
   tutoActive = false;
   const fin = coachOnEnd; coachOnEnd = null;
   if (tutoDemo) tutoDemoCleanup();
+  if (tutoConsDemo) tutoConsDemoCleanup();
   if (coachScreen) tutoMark(coachScreen);
   if (fin && !passer) fin();
 }
