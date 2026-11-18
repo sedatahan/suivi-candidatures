@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="app-version" content="2026.11.18-3">
+<meta name="app-version" content="2026.11.18-4">
 <meta name="app-update-level" content="minor">
 <title>Suivi Candidatures</title>
 <meta name="mobile-web-app-capable" content="yes">
@@ -6487,7 +6487,16 @@ initPlaneScene({
 // Le niveau « major » (meta app-update-level du serveur) affiche l'écran de mise à jour (nouvelles fonctionnalités à expliquer) ;
 // « minor » recharge l'app automatiquement quand elle est au calme (voir tenterRechargementAuto).
 // La version et le résultat de la dernière vérification sont visibles en bas du profil (aide au diagnostic).
-const APP_VERSION = (document.querySelector('meta[name="app-version"]') || {}).content || '';
+// Après un rechargement de mise à jour, l'adresse contient ?maj=<heure> : on la nettoie dans la barre
+// d'adresse (sans recharger), pour garder un lien propre à copier ou à mettre en favori.
+try {
+  const u = new URL(location.href);
+  if (u.searchParams.has('maj')) {
+    u.searchParams.delete('maj');
+    history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash);
+  }
+} catch(e) {}
+const APP_VERSION =(document.querySelector('meta[name="app-version"]') || {}).content || '';
 let lastVersionCheck = 0;
 let updateScreenShown = false;
 
